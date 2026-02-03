@@ -1,0 +1,6 @@
+# Worktrees are local only
+worktrees/
+
+# OS
+.DS_Store
+Thumbs.db
