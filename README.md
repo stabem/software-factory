@@ -2,6 +2,16 @@
 
 Multi-agent development system. 6 specialized AI agents work together to build software.
 
+## 🎯 Goals
+
+**The primary objectives of this system are:**
+
+1. **Token Efficiency** - Reduce context bloat by having specialized agents with focused instructions
+2. **Better Context** - Each agent maintains relevant context, avoiding information overload
+3. **Documented History** - Track what was changed, why, and lessons learned for future LLM sessions
+
+> **Key Insight:** When an LLM session ends, context is lost. The `.agent-comms/` directory serves as persistent memory, enabling future sessions to understand past decisions and avoid repeating mistakes.
+
 ## How It Works
 
 **One task flows through specialized agents in sequence:**
@@ -16,6 +26,7 @@ Human: "Add user authentication"
 │  - Delegates to specialized agents                          │
 │  - Monitors progress in PLAN.md                             │
 │  - Resolves conflicts                                       │
+│  - Documents validated changes in HISTORY.md                │
 └─────────────────────────────────────────────────────────────┘
          │
          ▼
@@ -59,8 +70,10 @@ Human: "Add user authentication"
          │
          ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  5. MERGE                                                   │
-│  Orchestrator merges agent/builder → main                   │
+│  5. MERGE & DOCUMENT                                        │
+│  - Orchestrator merges agent/builder → main                 │
+│  - Updates HISTORY.md with validated changes                │
+│  - Records lessons learned for future context               │
 │  Task complete ✅                                           │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -111,6 +124,7 @@ JWT. See design section 3.2.
 your-project/
 ├── .agent-comms/
 │   ├── PLAN.md              # Master document - ALL agents use this
+│   ├── HISTORY.md           # Validated changes log (for future context)
 │   ├── tasks.json           # Structured task queue
 │   └── ORCHESTRATION.md     # Detailed workflow guide
 ├── agents/
@@ -148,9 +162,10 @@ rm -rf .factory
 ## How to Spawn Agents
 
 ### Option 1: Subagents (recommended)
-```
-Orchestrator spawns specialized agents:
 
+The orchestrator spawns specialized agents that work in the **project directory**:
+
+```
 sessions_spawn(
   task="You are the Tester agent. Read agents/tester.md for instructions. 
         Test the code in internal/auth/. Update .agent-comms/PLAN.md with results.",
@@ -158,21 +173,23 @@ sessions_spawn(
 )
 ```
 
+> **Important:** Agents always work relative to the project root. Use relative paths (e.g., `./internal/`, `./.agent-comms/`) not absolute paths.
+
 ### Option 2: Direct prompt
 ```
 Read agents/builder.md for your instructions.
 Your task: Implement T2 from .agent-comms/PLAN.md
-Work in the worktrees/builder/ directory.
+Work in the project root directory.
 Update PLAN.md when done.
 ```
 
 ### Option 3: Separate terminals
 ```bash
-# Terminal 1 - Builder
-cd worktrees/builder && claude
+# Terminal 1 - Builder (in project root)
+cd /path/to/your-project && claude
 
-# Terminal 2 - Tester  
-cd worktrees/tester && claude
+# Terminal 2 - Tester (in project root)
+cd /path/to/your-project && claude
 ```
 
 ## Example Flow
@@ -191,16 +208,54 @@ cd worktrees/tester && claude
 9. If approved → Orchestrator spawns DocWriter
 10. DocWriter updates docs
 11. Orchestrator merges to main
-12. Reports to human: "Done ✅"
+12. **Documents in HISTORY.md:** what changed, why, lessons learned
+13. Reports to human: "Done ✅"
+
+## Documenting Validated Changes
+
+**After a feature/fix is validated and merged, the Orchestrator MUST update `.agent-comms/HISTORY.md`:**
+
+```markdown
+## 2026-02-05: Rate Limiting Implementation
+
+### What Changed
+- Added rate limiting middleware in `internal/middleware/ratelimit.go`
+- Configured 100 req/min per IP
+- Added Redis backend for distributed counting
+
+### Why
+- API was being hammered by scrapers
+- Previous in-memory solution didn't work across pods
+
+### Lessons Learned
+- Redis INCR with EXPIRE is atomic and perfect for this
+- Don't forget to exclude health check endpoints
+
+### Files Modified
+- internal/middleware/ratelimit.go (new)
+- internal/middleware/middleware.go
+- configs/config.yaml
+
+### Commits
+- abc1234: feat: add rate limiting middleware
+- def5678: fix: exclude health endpoints from rate limit
+```
+
+This history helps future LLM sessions understand:
+- **What** was done (don't reinvent the wheel)
+- **Why** it was done (understand the reasoning)
+- **Lessons learned** (avoid repeating mistakes)
 
 ## Key Rules
 
 1. **PLAN.md is the source of truth** - Every agent reads/writes here
-2. **Architect never codes** - Design only
-3. **Builder follows design exactly** - No architecture changes without Architect
-4. **Security can veto** - Critical findings block merge
-5. **Atomic commits** - One logical change per commit
-6. **Read before modify** - Always read CLAUDE.md of a package before changing it
+2. **HISTORY.md is persistent memory** - Document validated changes for future context
+3. **Architect never codes** - Design only
+4. **Builder follows design exactly** - No architecture changes without Architect
+5. **Security can veto** - Critical findings block merge
+6. **Atomic commits** - One logical change per commit
+7. **Read before modify** - Always read CLAUDE.md of a package before changing it
+8. **Use relative paths** - Never hardcode absolute paths like `/home/user/project`
 
 ## License
 

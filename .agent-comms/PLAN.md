@@ -4,6 +4,8 @@
 **Updated:** {{DATE}}  
 **Lead:** Orchestrator
 
+> **Note:** After validation, document changes in `HISTORY.md` for future context.
+
 ---
 
 ## Objective
@@ -16,6 +18,12 @@
 | - | - | ⏳ | - | Waiting for tasks | - |
 
 **Legend:** ✅ Done | 🔄 WIP | ⏳ Pending | ❌ Blocked | 🔴 Failed
+
+---
+
+## Design
+
+_Architect will add design here_
 
 ---
 
@@ -46,6 +54,14 @@ _No messages yet_
 - [ ] Documentation updated
 - [ ] CLAUDE.md created/updated
 - [ ] PR created
+
+### Checkpoint 5: Documented ⭐
+- [ ] Merged to main
+- [ ] **HISTORY.md updated** with:
+  - What changed
+  - Why
+  - Lessons learned
+  - Files modified
 
 ---
 
