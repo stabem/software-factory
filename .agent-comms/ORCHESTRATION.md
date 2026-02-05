@@ -1,5 +1,19 @@
 # 🏭 Software Factory - Orchestration Guide
 
+## ⚠️ File Location
+
+**These files must be INSIDE each project directory:**
+
+```
+✅ /opt/bybit-agents/.agent-comms/PLAN.md
+✅ /opt/content-api/.agent-comms/PLAN.md
+❌ /home/user/clawd/.agent-comms/PLAN.md   ← NOT in workspace root
+```
+
+Each project has its own `.agent-comms/` folder with its own PLAN.md and HISTORY.md.
+
+---
+
 ## 🎯 Primary Goals
 
 1. **Token Efficiency** - Specialized agents = smaller, focused context

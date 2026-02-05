@@ -2,6 +2,39 @@
 
 Multi-agent development system. 6 specialized AI agents work together to build software.
 
+## ⚠️ Important: File Location
+
+**All factory files live INSIDE each project directory, not in a central location.**
+
+```
+✅ CORRECT - inside each project:
+/opt/bybit-agents/
+├── .agent-comms/          ← HERE, inside the project
+│   ├── PLAN.md
+│   └── HISTORY.md
+├── internal/
+└── cmd/
+
+/opt/content-api/
+├── .agent-comms/          ← Each project has its own
+│   ├── PLAN.md
+│   └── HISTORY.md
+└── src/
+
+❌ WRONG - centralized:
+/home/user/clawd/
+├── .agent-comms/          ← NOT here in workspace root
+│   ├── PLAN.md
+│   └── ...
+├── projects/
+│   ├── bybit-agents/
+│   └── content-api/
+```
+
+When you copy this template, copy it **into the project root**, not your workspace.
+
+---
+
 ## 🎯 Goals
 
 **The primary objectives of this system are:**
@@ -146,17 +179,32 @@ your-project/
 ## Quick Setup
 
 ```bash
-# 1. In your existing project, pull the template
+# 1. Go to YOUR PROJECT directory (not workspace root!)
+cd /path/to/your-project      # e.g., /opt/bybit-agents
+
+# 2. Pull the template INTO the project
 npx degit stabem/software-factory .factory --force
 cp -r .factory/* .
 rm -rf .factory
 
-# 2. Create git worktrees for each agent
+# 3. Create git worktrees for each agent (optional)
 ./scripts/setup-worktrees.sh      # Linux/Mac
 .\scripts\setup-factory.ps1       # Windows
 
-# 3. Start using it
+# 4. Start using it
+# Now your project has .agent-comms/, agents/, etc.
 # Edit .agent-comms/PLAN.md to add tasks
+```
+
+**Result:**
+```
+/opt/bybit-agents/           ← your project
+├── .agent-comms/            ← factory files now here
+│   ├── PLAN.md
+│   └── HISTORY.md
+├── agents/
+├── internal/                ← your existing code
+└── cmd/
 ```
 
 ## How to Spawn Agents
