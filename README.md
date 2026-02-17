@@ -1,310 +1,257 @@
 # 🏭 Software Factory
 
-Multi-agent development system. 6 specialized AI agents work together to build software.
+A battle-tested development methodology for AI-assisted software development. Built from real production experience shipping SaaS products with AI agents.
 
-## ⚠️ Important: File Location
-
-**All factory files live INSIDE each project directory, not in a central location.**
-
-```
-✅ CORRECT - inside each project:
-/opt/bybit-agents/
-├── .agent-comms/          ← HERE, inside the project
-│   ├── PLAN.md
-│   └── HISTORY.md
-├── internal/
-└── cmd/
-
-/opt/content-api/
-├── .agent-comms/          ← Each project has its own
-│   ├── PLAN.md
-│   └── HISTORY.md
-└── src/
-
-❌ WRONG - centralized:
-/home/user/clawd/
-├── .agent-comms/          ← NOT here in workspace root
-│   ├── PLAN.md
-│   └── ...
-├── projects/
-│   ├── bybit-agents/
-│   └── content-api/
-```
-
-When you copy this template, copy it **into the project root**, not your workspace.
+**Not theoretical.** Every rule here exists because we hit the problem first.
 
 ---
 
-## 🎯 Goals
+## What This Is
 
-**The primary objectives of this system are:**
+A drop-in methodology for any project where AI agents build software. It works with:
+- Claude Code, Codex CLI, OpenCode, Cursor, Windsurf
+- OpenClaw sub-agents
+- Any LLM-based coding workflow
 
-1. **Token Efficiency** - Reduce context bloat by having specialized agents with focused instructions
-2. **Better Context** - Each agent maintains relevant context, avoiding information overload
-3. **Documented History** - Track what was changed, why, and lessons learned for future LLM sessions
+**Core idea:** Treat AI agents like junior-to-mid engineers on your team. They're fast but need clear specs, explicit boundaries, and verification. This system provides the structure.
 
-> **Key Insight:** When an LLM session ends, context is lost. The `.agent-comms/` directory serves as persistent memory, enabling future sessions to understand past decisions and avoid repeating mistakes.
+## Quick Start
 
-## How It Works
+1. Copy `AGENTS.md` into your project root
+2. Create `tasks/todo.md` and `tasks/lessons.md`
+3. Start following the 5-phase cycle
 
-**One task flows through specialized agents in sequence:**
+That's it. Everything else is optional.
+
+---
+
+## The 5-Phase Cycle
+
+Every non-trivial task follows this cycle:
 
 ```
-Human: "Add user authentication"
-         │
-         ▼
-┌─────────────────────────────────────────────────────────────┐
-│  ORCHESTRATOR (you, the main AI)                            │
-│  - Receives task from human                                 │
-│  - Delegates to specialized agents                          │
-│  - Monitors progress in PLAN.md                             │
-│  - Resolves conflicts                                       │
-│  - Documents validated changes in HISTORY.md                │
-└─────────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────────────────────┐
-│  1. ARCHITECT 🏗️                                            │
-│  Input:  Feature request                                    │
-│  Does:   Designs solution, breaks into tasks                │
-│  Output: Design doc + task list in PLAN.md                  │
-│  Rules:  NO CODE - only design                              │
-└─────────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────────────────────┐
-│  2. BUILDER 🔨                                              │
-│  Input:  Task list from Architect                           │
-│  Does:   Writes production code                             │
-│  Output: Commits on agent/builder branch                    │
-│  Rules:  Follow design exactly, atomic commits              │
-└─────────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────────────────────┐
-│  3. VALIDATION (parallel)                                   │
-│                                                             │
-│  TESTER 🧪         REVIEWER 🔍        SECURITY 🛡️           │
-│  - Unit tests      - Code review      - Vuln scan          │
-│  - Integration     - Best practices   - OWASP Top 10       │
-│  - Coverage 80%+   - Find bugs        - Dependency audit   │
-│                                                             │
-│  All three update PLAN.md with findings                     │
-│  If issues found → back to BUILDER                          │
-└─────────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────────────────────┐
-│  4. DOCWRITER 📝                                            │
-│  Input:  Approved code                                      │
-│  Does:   Updates CLAUDE.md, README, changelog               │
-│  Output: Documentation for the changes                      │
-└─────────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────────────────────┐
-│  5. MERGE & DOCUMENT                                        │
-│  - Orchestrator merges agent/builder → main                 │
-│  - Updates HISTORY.md with validated changes                │
-│  - Records lessons learned for future context               │
-│  Task complete ✅                                           │
-└─────────────────────────────────────────────────────────────┘
+INVESTIGATE → PLAN → EXECUTE → VERIFY
+     ↑                              |
+     └──── LEARN (always) ──────────┘
 ```
 
-## The 6 Agents
+### Phase 1: INVESTIGATE 🔍
 
-| Agent | Role | Input | Output |
-|-------|------|-------|--------|
-| 🏗️ **Architect** | Design systems | Feature request | Design + tasks in PLAN.md |
-| 🔨 **Builder** | Write code | Tasks from PLAN.md | Commits on branch |
-| 🧪 **Tester** | Write tests | Code from Builder | Test results in PLAN.md |
-| 🔍 **Reviewer** | Code review | Code from Builder | Review in PLAN.md |
-| 🛡️ **Security** | Security audit | Code from Builder | Audit in PLAN.md |
-| 📝 **DocWriter** | Documentation | Approved code | Updated docs |
+**Before writing a single line of code, understand the problem with DATA.**
 
-## Communication: PLAN.md
+- Query the database. Check real user behavior, not assumptions.
+- Read the relevant code. Understand the architecture before changing it.
+- Check logs, error rates, actual traffic patterns.
+- Look at the full production path (external URLs, not just localhost).
+- Identify the REAL root cause, not the symptom.
 
-All agents read and write to `.agent-comms/PLAN.md`. This is the single source of truth.
+**Anti-pattern:** "Users aren't converting → must be bad onboarding UX"  
+**Correct:** "Users aren't converting → 49% can't verify email → they're BLOCKED, not confused"
+
+**Investigation checklist:**
+- [ ] Queried DB for real numbers
+- [ ] Read the relevant source files
+- [ ] Checked logs/errors for the actual failure mode
+- [ ] Tested the production path (not just dev/localhost)
+- [ ] Identified root cause vs symptom
+
+### Phase 2: PLAN 📋
+
+**Write a plan BEFORE touching code. The plan is a contract.**
+
+**When to plan (mandatory):**
+- Any task with 3+ steps
+- Any architectural decision
+- Any task involving multiple files or services
+- Any task delegated to sub-agents
+
+**Plan structure:**
+1. **Problem statement** — what's broken, with data
+2. **Root cause** — why it's broken
+3. **Solution spec** — exact files, exact changes, exact behavior
+4. **Task breakdown** — checkable items in `tasks/todo.md`
+5. **Agent assignment** — who does what (if parallelizing)
+6. **Verification criteria** — how we know it's done
+
+### Phase 3: EXECUTE ⚡
+
+**Build the thing. Use sub-agents for parallelism.**
+
+See [Sub-Agent Rules](#sub-agent-rules) below — this is where most mistakes happen.
+
+### Phase 4: VERIFY ✅
+
+**Never mark a task complete without proving it works.**
+
+- Run the build. Check for compilation errors.
+- Test the actual user flow end-to-end (E2E).
+- Test the **production path** (external URLs, CDN, proxies) — not just localhost.
+- Check for side effects (did we break something else?).
+
+**E2E Verification checklist:**
+- [ ] Build passes
+- [ ] Feature works on localhost
+- [ ] Feature works on production URL
+- [ ] No regressions
+- [ ] Error cases handled gracefully
+
+### Phase 5: LEARN 🧠
+
+**Every mistake becomes a rule. Every surprise becomes a lesson.**
+
+After ANY correction, failure, or unexpected behavior:
+
+1. Document it in `tasks/lessons.md`
+2. Review lessons at the start of every work session
+3. Promote patterns to the pitfalls table when broadly applicable
+
+---
+
+## Sub-Agent Rules
+
+This is where projects fail. These rules are non-negotiable.
+
+### The Golden Rules
+
+| Rule | Why |
+|------|-----|
+| **One file owner per agent** | Two agents editing the same file = merge conflicts, reverted changes, subtle bugs |
+| **One task per agent** | Focused execution beats multi-tasking |
+| **Every agent builds + tests** | "Done" means it compiles and runs, not "I wrote the code" |
+| **Explicit file boundaries** | Every spec lists which files the agent CAN and CANNOT touch |
+
+### Sub-Agent Spec Template
+
+Every sub-agent task MUST include:
 
 ```markdown
-# Project Plan
+## Task: [Name]
 
-## Active Tasks
-| ID | Agent | Status | Description |
-|----|-------|--------|-------------|
-| T1 | architect | ✅ Done | Design auth system |
-| T2 | builder | 🔄 WIP | Implement JWT auth |
-| T3 | tester | ⏳ Pending | Write auth tests |
+### Context
+[Brief description of the project, stack, architecture]
 
-## Messages
-### Builder → Architect (10:25)
-Should I use JWT or sessions?
+### Tasks (in order):
+1. [Specific change with file path]
+2. [...]
 
-### Architect → Builder (10:28)
-JWT. See design section 3.2.
+### Build & Test
+[Exact commands to verify the work]
+
+### DO NOT:
+- [Files/systems this agent must not touch]
+- [Patterns to avoid]
 ```
 
-**Status icons:**
-- ✅ Done
-- 🔄 WIP (working)
-- ⏳ Pending (waiting)
-- ❌ Blocked
-- 🔴 Failed
+**Why this matters:** Without explicit boundaries, agents will "helpfully" modify files outside their scope, breaking other agents' work. We learned this the hard way.
+
+---
 
 ## File Structure
 
 ```
 your-project/
-├── .agent-comms/
-│   ├── PLAN.md              # Master document - ALL agents use this
-│   ├── HISTORY.md           # Validated changes log (for future context)
-│   ├── tasks.json           # Structured task queue
-│   └── ORCHESTRATION.md     # Detailed workflow guide
-├── agents/
-│   ├── architect.md         # Instructions for Architect agent
-│   ├── builder.md           # Instructions for Builder agent
-│   ├── tester.md            # Instructions for Tester agent
-│   ├── reviewer.md          # Instructions for Reviewer agent
-│   ├── security.md          # Instructions for Security agent
-│   └── docwriter.md         # Instructions for DocWriter agent
-├── worktrees/               # Git worktrees (created by setup script)
-│   ├── architect/           # Architect works here
-│   ├── builder/             # Builder works here
-│   └── ...
-└── scripts/
-    ├── setup-worktrees.sh   # Linux/Mac setup
-    └── setup-factory.ps1    # Windows setup
+├── AGENTS.md              # ← Drop this in (full methodology)
+├── tasks/
+│   ├── todo.md            # Active task tracking
+│   └── lessons.md         # Accumulated lessons (append-only)
+└── ... your code ...
 ```
 
-## Quick Setup
+### `AGENTS.md`
 
-```bash
-# 1. Go to YOUR PROJECT directory (not workspace root!)
-cd /path/to/your-project      # e.g., /opt/bybit-agents
+The main file. Contains the full methodology that any AI agent reads at session start. Drop it into any project root and every agent inherits the workflow automatically.
 
-# 2. Pull the template INTO the project
-npx degit stabem/software-factory .factory --force
-cp -r .factory/* .
-rm -rf .factory
+**Key property:** Project-agnostic. Works for Go APIs, React frontends, Python scripts, anything. You never need to re-explain the methodology — agents read AGENTS.md and know how to work.
 
-# 3. Create git worktrees for each agent (optional)
-./scripts/setup-worktrees.sh      # Linux/Mac
-.\scripts\setup-factory.ps1       # Windows
+### `tasks/todo.md`
 
-# 4. Start using it
-# Now your project has .agent-comms/, agents/, etc.
-# Edit .agent-comms/PLAN.md to add tasks
-```
-
-**Result:**
-```
-/opt/bybit-agents/           ← your project
-├── .agent-comms/            ← factory files now here
-│   ├── PLAN.md
-│   └── HISTORY.md
-├── agents/
-├── internal/                ← your existing code
-└── cmd/
-```
-
-## How to Spawn Agents
-
-### Option 1: Subagents (recommended)
-
-The orchestrator spawns specialized agents that work in the **project directory**:
-
-```
-sessions_spawn(
-  task="You are the Tester agent. Read agents/tester.md for instructions. 
-        Test the code in internal/auth/. Update .agent-comms/PLAN.md with results.",
-  label="tester-auth"
-)
-```
-
-> **Important:** Agents always work relative to the project root. Use relative paths (e.g., `./internal/`, `./.agent-comms/`) not absolute paths.
-
-### Option 2: Direct prompt
-```
-Read agents/builder.md for your instructions.
-Your task: Implement T2 from .agent-comms/PLAN.md
-Work in the project root directory.
-Update PLAN.md when done.
-```
-
-### Option 3: Separate terminals
-```bash
-# Terminal 1 - Builder (in project root)
-cd /path/to/your-project && claude
-
-# Terminal 2 - Tester (in project root)
-cd /path/to/your-project && claude
-```
-
-## Example Flow
-
-**Human says:** "Add rate limiting to the API"
-
-**Orchestrator:**
-1. Updates PLAN.md: `| T1 | architect | 🔄 WIP | Design rate limiting |`
-2. Spawns Architect agent
-3. Architect writes design in PLAN.md, creates tasks T2-T5
-4. Orchestrator spawns Builder for T2
-5. Builder implements, commits, updates PLAN.md
-6. Orchestrator spawns Tester + Reviewer + Security (parallel)
-7. All three report in PLAN.md
-8. If issues → back to Builder
-9. If approved → Orchestrator spawns DocWriter
-10. DocWriter updates docs
-11. Orchestrator merges to main
-12. **Documents in HISTORY.md:** what changed, why, lessons learned
-13. Reports to human: "Done ✅"
-
-## Documenting Validated Changes
-
-**After a feature/fix is validated and merged, the Orchestrator MUST update `.agent-comms/HISTORY.md`:**
+Active task tracking. One per project (or per sprint).
 
 ```markdown
-## 2026-02-05: Rate Limiting Implementation
+# [Project Name] — Active Tasks
 
-### What Changed
-- Added rate limiting middleware in `internal/middleware/ratelimit.go`
-- Configured 100 req/min per IP
-- Added Redis backend for distributed counting
+## Phase: [Investigation | Planning | Execution | Verification]
 
-### Why
-- API was being hammered by scrapers
-- Previous in-memory solution didn't work across pods
+### Current Sprint
+- [ ] Task 1 — [brief description]
+- [ ] Task 2 — [brief description]
+- [x] Task 3 — [completed]
 
-### Lessons Learned
-- Redis INCR with EXPIRE is atomic and perfect for this
-- Don't forget to exclude health check endpoints
+### Blocked
+- [ ] Task 4 — blocked on [reason]
 
-### Files Modified
-- internal/middleware/ratelimit.go (new)
-- internal/middleware/middleware.go
-- configs/config.yaml
-
-### Commits
-- abc1234: feat: add rate limiting middleware
-- def5678: fix: exclude health endpoints from rate limit
+### Review
+[Post-completion notes, what worked, what didn't]
 ```
 
-This history helps future LLM sessions understand:
-- **What** was done (don't reinvent the wheel)
-- **Why** it was done (understand the reasoning)
-- **Lessons learned** (avoid repeating mistakes)
+### `tasks/lessons.md`
 
-## Key Rules
+Accumulated lessons. **Append-only — never delete, only add.**
 
-1. **PLAN.md is the source of truth** - Every agent reads/writes here
-2. **HISTORY.md is persistent memory** - Document validated changes for future context
-3. **Architect never codes** - Design only
-4. **Builder follows design exactly** - No architecture changes without Architect
-5. **Security can veto** - Critical findings block merge
-6. **Atomic commits** - One logical change per commit
-7. **Read before modify** - Always read CLAUDE.md of a package before changing it
-8. **Use relative paths** - Never hardcode absolute paths like `/home/user/project`
+```markdown
+# Lessons Learned
+
+## [Category]
+
+### [Short title]
+- **Problem:** What went wrong
+- **Lesson:** What we learned
+- **Rule:** Concrete rule to prevent repetition
+```
+
+---
+
+## Common Pitfalls
+
+From real production experience:
+
+| Pitfall | Rule |
+|---------|------|
+| Two sub-agents editing same file | One owner per file. Sequence if needed. |
+| Sub-agent says "done" but build fails | Every spec ends with build + smoke test command. |
+| Testing on localhost, broken in prod | E2E tests MUST hit production URLs (CDN, proxies, DNS). |
+| Planning fixes before investigating | ALWAYS query DB + check logs first. |
+| Pushing through when plan fails | STOP and re-plan. Don't keep hacking. |
+| "Mental notes" about things to remember | Write it to a file. Memory doesn't survive sessions. |
+| Cache/state after mutations | State changes (email verify, role change) → invalidate caches + refresh tokens. |
+| SPA routing vs API routing | Verify the full production path: CDN → reverse proxy → backend. SPAs catch-all routes intercept API paths. |
+| Assuming API responses have all fields | Check the actual response struct. Missing fields = `undefined` on frontend = silent bugs. |
+
+---
+
+## Philosophy
+
+- **Investigate with Data:** Query DB, check logs, look at real behavior BEFORE planning. Assumptions kill projects.
+- **Simplicity First:** Make every change as simple as possible. Minimal code impact.
+- **No Laziness:** Find root causes. No temporary fixes. Senior developer standards.
+- **Autonomous Bug Fixing:** When given a bug report, just fix it. Point at logs, errors, failing tests — then resolve them.
+- **Text > Brain:** If you want to remember something, write it to a file. Mental notes don't survive session restarts.
+
+---
+
+## Real-World Example
+
+Here's how this methodology was used to fix a 49% user drop-off in a SaaS API:
+
+**INVESTIGATE:** Queried DB → 17 of 35 users never verified email → all got 403 on every API call. The verification token was generated at signup but **never emailed**.
+
+**PLAN:** Created 3 parallel sub-agents:
+- `p0-backend` — verification email, improved 403 message, resend endpoint
+- `p0-frontend` — verification banner, getting started checklist, demo fallback
+- `p1p2-backend` — reminder emails, milestone emails, win-back emails
+
+Each agent had explicit file ownership — no overlapping files.
+
+**EXECUTE:** All 3 agents ran in parallel (~2 min each). One agent introduced a type assertion bug in a shared file — caught because we have the "one file owner" rule and the other agent's build failed.
+
+**VERIFY:** Full E2E test: signup → emails arrived → clicked verify link → dashboard updated → API calls worked. Found 3 more bugs (cache not invalidating, verify link routing through SPA, missing field in API response). Fixed all.
+
+**LEARN:** 5 new lessons added to `tasks/lessons.md`, 3 promoted to the pitfalls table.
+
+**Result:** 0% → 100% of new signups now receive verification email. Drop-off eliminated.
+
+---
 
 ## License
 
-MIT
+MIT — use it however you want.
