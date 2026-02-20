@@ -99,15 +99,21 @@ See [Sub-Agent Rules](#sub-agent-rules) below — this is where most mistakes ha
 
 **No direct deploy after local implementation. Every change must go through PR first.**
 
-Required flow (especially for `bybit-agents` and `content-api`):
-1. Create branch from `main`
+Required flow (mandatory for all repos, critical for `bybit-agents` and `content-api`):
+1. Create branch from default branch (`main` or `master`)
 2. Commit with clear scope
 3. Push branch
 4. Open PR with test evidence and rollout notes
-5. Wait for automated Codex review comments
+5. Wait for automated Guardian/Codex review comments
 6. Apply required fixes, push updates
-7. Merge only when checks/review are green
-8. Deploy from merged `main` (never from unreviewed branch)
+7. Re-run review until no blocking findings
+8. Merge only when checks/review are green
+9. Deploy from merged default branch only (never from unreviewed branch)
+
+**Automation pattern (org-wide):**
+- Reusable workflow for review (`guardian-review`)
+- Optional reusable workflow for conditional auto-approval (`guardian-approve`)
+- Branch protection requires review check + at least 1 approval
 
 **PR checklist (copy into PR body):**
 - [ ] Root cause documented
