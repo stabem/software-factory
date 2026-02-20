@@ -95,6 +95,28 @@ See [Sub-Agent Rules](#sub-agent-rules) below — this is where most mistakes ha
 - [ ] No regressions
 - [ ] Error cases handled gracefully
 
+### Phase 4.5: PR GATE (MANDATORY) 🔐
+
+**No direct deploy after local implementation. Every change must go through PR first.**
+
+Required flow (especially for `bybit-agents` and `content-api`):
+1. Create branch from `main`
+2. Commit with clear scope
+3. Push branch
+4. Open PR with test evidence and rollout notes
+5. Wait for automated Codex review comments
+6. Apply required fixes, push updates
+7. Merge only when checks/review are green
+8. Deploy from merged `main` (never from unreviewed branch)
+
+**PR checklist (copy into PR body):**
+- [ ] Root cause documented
+- [ ] Fix implemented with minimal scope
+- [ ] Build/test evidence included
+- [ ] User-path verification included
+- [ ] Monitoring/Sentry impact noted
+- [ ] Rollback plan included
+
 ### Phase 5: LEARN 🧠
 
 **Every mistake becomes a rule. Every surprise becomes a lesson.**

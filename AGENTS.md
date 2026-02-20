@@ -112,6 +112,20 @@ INVESTIGATE → PLAN → EXECUTE → VERIFY
 
 ---
 
+## Phase 4.5: PR GATE 🔐 (Mandatory)
+
+After implementation/verification, PR is required before deploy:
+
+1. Create branch from `main`
+2. Commit scoped changes
+3. Push and open PR
+4. Wait for Codex/automated review
+5. Address all requested changes
+6. Merge after checks pass
+7. Deploy only from merged `main`
+
+For `bybit-agents` and `content-api`, this step is non-negotiable.
+
 ## Phase 5: LEARN 🧠 (Always)
 
 **Every mistake becomes a rule. Every surprise becomes a lesson.**
