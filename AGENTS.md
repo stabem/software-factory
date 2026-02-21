@@ -132,6 +132,13 @@ Org standard:
 
 For `bybit-agents` and `content-api`, this step is non-negotiable.
 
+## Pricing/Billing Guardrail 🔒
+
+- Never create/rename/remove commercial plans without explicit owner approval.
+- Do not infer new Stripe SKUs from technical rate-limit/quota work.
+- Before touching plan logic, validate current project pricing and billing wiring.
+- PR must explicitly state: "No new commercial plan created" when only technical limits are adjusted.
+
 ## Phase 5: LEARN 🧠 (Always)
 
 **Every mistake becomes a rule. Every surprise becomes a lesson.**

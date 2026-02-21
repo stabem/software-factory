@@ -123,6 +123,13 @@ Required flow (mandatory for all repos, critical for `bybit-agents` and `content
 - [ ] Monitoring/Sentry impact noted
 - [ ] Rollback plan included
 
+### Pricing/Billing Guardrail (Mandatory)
+
+- Never introduce or assume new commercial plans (Stripe/pricing tiers) without explicit owner approval.
+- Technical throttling/quota changes must map to **existing** project plan definitions.
+- If legacy/deprecated plan labels exist in code, clarify in PR body that no new SKU is being created.
+- Any pricing/billing change requires dedicated PR section: current state, proposed change, Stripe impact, rollback.
+
 ### Phase 5: LEARN 🧠
 
 **Every mistake becomes a rule. Every surprise becomes a lesson.**
