@@ -20,8 +20,30 @@ A drop-in methodology for any project where AI agents build software. It works w
 1. Copy `AGENTS.md` into your project root
 2. Create `tasks/todo.md` and `tasks/lessons.md`
 3. Start following the 5-phase cycle
+4. Use **PR-first delivery**: every implementation ends in a Pull Request (no direct pushes to main)
 
 That's it. Everything else is optional.
+
+---
+
+## PR-First Delivery Loop (Required)
+
+For production repos, treat PR creation as part of "done":
+
+1. Implement changes on a feature branch
+2. Run build/tests + smoke checks
+3. Push branch and open PR with:
+   - root cause
+   - exact files changed
+   - verification commands/output
+   - risk/rollback notes
+4. Let review automation/humans comment (Codex/CI/reviewer)
+5. Apply fixes in the same PR until green
+6. Merge only after checks pass
+7. Deploy and validate in production path
+
+**Rule:** If there is no PR, the task is not complete.
+
 
 ---
 
@@ -94,6 +116,8 @@ See [Sub-Agent Rules](#sub-agent-rules) below — this is where most mistakes ha
 - [ ] Feature works on production URL
 - [ ] No regressions
 - [ ] Error cases handled gracefully
+- [ ] PR opened with validation evidence
+- [ ] PR checks/review feedback resolved before merge
 
 ### Phase 5: LEARN 🧠
 
