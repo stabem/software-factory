@@ -112,6 +112,33 @@ INVESTIGATE → PLAN → EXECUTE → VERIFY
 
 ---
 
+## Phase 4.5: PR GATE 🔐 (Mandatory)
+
+After implementation/verification, PR is required before deploy:
+
+1. Create branch from default branch (`main` or `master`)
+2. Commit scoped changes
+3. Push and open PR
+4. Wait for Guardian/Codex automated review
+5. Address all requested changes
+6. Re-run review until no blocking findings
+7. Merge after checks pass
+8. Deploy only from merged default branch
+
+Org standard:
+- Use reusable workflows from `stabem/.github` when available
+- Require status check `review`
+- Require at least one approval
+
+For `bybit-agents` and `content-api`, this step is non-negotiable.
+
+## Pricing/Billing Guardrail 🔒
+
+- Never create/rename/remove commercial plans without explicit owner approval.
+- Do not infer new Stripe SKUs from technical rate-limit/quota work.
+- Before touching plan logic, validate current project pricing and billing wiring.
+- PR must explicitly state: "No new commercial plan created" when only technical limits are adjusted.
+
 ## Phase 5: LEARN 🧠 (Always)
 
 **Every mistake becomes a rule. Every surprise becomes a lesson.**
