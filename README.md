@@ -131,6 +131,12 @@ Alert the human only when intervention is required (failed retries, conflicting 
 Default path should be autonomous.
 
 ---
+
+### Reference implementation in this repo
+- `templates/swarm.tasks.example.json`
+- `scripts/check-swarm.sh`
+- `docs/SWARM_RUNBOOK.md`
+
 ## The 5-Phase Cycle
 
 Every non-trivial task follows this cycle:

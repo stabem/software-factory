@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "updatedAt": "2026-02-24T00:00:00Z",
+  "defaults": {
+    "maxRetries": 3,
+    "requiredChecks": ["review", "ci"],
+    "requirePr": true
+  },
+  "tasks": [
+    {
+      "id": "task-001",
+      "title": "Implement feature X",
+      "status": "queued",
+      "branch": "feat/feature-x",
+      "owner": "agent-codex",
+      "session": {
+        "type": "tmux",
+        "name": "swarm-task-001"
+      },
+      "pr": {
+        "number": null,
+        "url": null,
+        "state": null
+      },
+      "checks": {
+        "review": "pending",
+        "ci": "pending"
+      },
+      "retries": 0,
+      "notes": ""
+    }
+  ]
+}
