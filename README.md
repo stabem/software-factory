@@ -47,6 +47,54 @@ For production repos, treat PR creation as part of "done":
 
 ---
 
+
+## Orchestrator + Agent Swarm Pattern
+
+For one-person teams using multiple AI coding agents, adopt an **orchestrator-first** architecture:
+
+1. **Orchestrator plans** the work (problem, root cause, spec, acceptance criteria)
+2. **Delegates task packets** to specialized agents/tools
+3. **Collects evidence** (changed files, test logs, risk notes, rollback)
+4. **Integrates + verifies** before PR
+
+### Task Packet Template (copy/paste)
+```markdown
+## Outcome
+[Exact expected result]
+
+## In Scope
+- path/to/fileA
+- path/to/fileB
+
+## Out of Scope
+- path/to/fileC
+
+## Validation
+- [command 1]
+- [command 2]
+
+## Deliverables
+- changed files list
+- test/build output
+- risk notes
+- rollback command
+```
+
+### Routing Heuristics (model/agent choice)
+- **Complex architecture / high-risk**: strongest reasoning model
+- **Refactor / repetitive edits**: fast coding model
+- **Research / option discovery**: parallel cheap workers + orchestrator synthesis
+
+### Reliability Ops for External Integrations
+If your workflow depends on authenticated scraping/extraction (e.g., X article full-text):
+- define a canary check (hourly)
+- alert when extraction quality drops (e.g., text length threshold)
+- keep a documented session refresh runbook
+- persist auth/session state in env/config so restarts do not silently degrade behavior
+
+This avoids hidden drift where “pipeline is green” but business data quality is broken.
+
+---
 ## The 5-Phase Cycle
 
 Every non-trivial task follows this cycle:
