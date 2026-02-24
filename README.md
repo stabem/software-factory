@@ -95,6 +95,42 @@ If your workflow depends on authenticated scraping/extraction (e.g., X article f
 This avoids hidden drift where “pipeline is green” but business data quality is broken.
 
 ---
+
+## What We Incorporated from Real-World Swarm Operations
+
+Based on production use of orchestrated Codex/Claude/Gemini-style swarms, we add these practical rules:
+
+### 1) PR is not Done
+A PR link is a milestone, not completion.
+Completion requires:
+- branch rebased/synced with default branch
+- CI green
+- blocking review comments resolved
+- UX evidence for UI changes
+
+### 2) Use a Task Registry + Deterministic Monitor
+Track worker state in a machine-readable registry (JSON/YAML).
+Run a low-cost monitor loop (cron) to check:
+- worker liveness
+- PR existence
+- check status
+- retry budget
+
+This is cheaper and more reliable than repeatedly asking an LLM for status.
+
+### 3) Reviewers Should Be Complementary
+Use different reviewer strengths (correctness, security/scalability, sanity check).
+Gate merges only on `critical` findings.
+
+### 4) Respect Hardware Limits
+Swarm throughput is often bounded by RAM/IO before model limits.
+Define per-host concurrency budgets and stagger heavy build/test jobs.
+
+### 5) Human Escalation by Exception
+Alert the human only when intervention is required (failed retries, conflicting reviews, product decision).
+Default path should be autonomous.
+
+---
 ## The 5-Phase Cycle
 
 Every non-trivial task follows this cycle:

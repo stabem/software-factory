@@ -131,6 +131,47 @@ No evidence = not done.
 ---
 ---
 
+
+## Recursive Delivery Loop (Swarm Ops) ♻️
+
+For high-velocity repos, define an explicit machine-run loop around PR delivery.
+
+### Registry-driven orchestration
+- Keep a lightweight task registry (`.swarm/tasks.json`) with status (`queued|running|done|blocked`), branch, PR, checks.
+- Agents update registry state as they progress.
+- Orchestrator reads registry to decide interventions.
+
+### Deterministic monitor (cron-friendly)
+Use a cheap monitoring script every 5–10 minutes to avoid expensive LLM polling:
+- verify worker session/process is alive
+- verify PR exists for active branch
+- verify CI/check statuses
+- verify blocking review comments
+- auto-respawn failed worker up to N retries (default 3)
+- alert human only when decision is required
+
+### Definition of Done (DoD) for agent-completed tasks
+Do **not** mark complete on "PR opened". Done requires:
+- PR opened
+- branch synced with default branch
+- required CI checks passing
+- required review gates resolved
+- screenshots/evidence attached for UI changes
+
+### Multi-review policy
+Use complementary reviewers (not duplicates):
+- one reviewer optimized for correctness/edge cases
+- one reviewer optimized for security/scalability
+- one reviewer as tie-breaker / sanity check
+
+Rule: classify comments as `critical` vs `nice-to-have`; block only on critical.
+
+### Resource-aware parallelism
+- Parallel agents are constrained by RAM/CPU/IO, not just model quota.
+- Set per-host limits (max active workers, max concurrent builds/tests).
+- If swap pressure or CI flakiness rises, reduce concurrency before changing architecture.
+
+---
 ## Phase 4: VERIFY ✅
 
 **Never mark a task complete without proving it works.**
@@ -233,3 +274,7 @@ After ANY correction, failure, or unexpected behavior:
 | Too many parallel agents create merge noise | Cap concurrency (default 3) and enforce disjoint ownership. |
 | Agent/model choice is random | Route by task type and record rationale in PR notes. |
 | Delegated work marked done without proof | Require changed files + test logs + rollback note. |
+
+| PR opened ≠ task complete | Enforce DoD with CI + review + sync checks before merge. |
+| Monitoring loop burns tokens | Prefer deterministic scripts + registry checks over LLM polling. |
+| Swap/memory pressure from too many workers | Set host-level concurrency limits and stagger heavy build/test phases. |
