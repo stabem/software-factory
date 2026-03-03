@@ -80,6 +80,45 @@ For one-person teams using multiple AI coding agents, adopt an **orchestrator-fi
 - rollback command
 ```
 
+### How to Use the Task Packet Template (Detailed)
+
+Use one packet **per delegated task** (not per project). A good packet removes ambiguity.
+
+1. **Copy the template** into your task/issue/PR comment.
+2. Fill `Outcome` with a testable sentence (avoid vague goals).
+3. Fill `In Scope` with exact paths the agent can touch.
+4. Fill `Out of Scope` with protected files/areas.
+5. Fill `Validation` with exact commands (build/test/smoke).
+6. Before execution, confirm packet with the orchestrator/human.
+7. After execution, reject any delivery missing evidence.
+
+#### Good packet example
+```markdown
+## Outcome
+Add `/healthz` endpoint returning `{ "status": "ok" }` with 200.
+
+## In Scope
+- src/routes/health.ts
+- src/server.ts
+- tests/health.test.ts
+
+## Out of Scope
+- billing/
+- auth/
+- database schema/migrations
+
+## Validation
+- npm run build
+- npm test -- health.test.ts
+- curl -i http://localhost:3000/healthz
+
+## Deliverables
+- changed files list
+- test/build output
+- risk notes
+- rollback command
+```
+
 ### Routing Heuristics (model/agent choice)
 - **Complex architecture / high-risk**: strongest reasoning model
 - **Refactor / repetitive edits**: fast coding model
@@ -136,6 +175,66 @@ Default path should be autonomous.
 - `templates/swarm.tasks.example.json`
 - `scripts/check-swarm.sh`
 - `docs/SWARM_RUNBOOK.md`
+
+### How to Use `templates/swarm.tasks.example.json` (Detailed)
+
+This file is the machine-readable registry for swarm execution.
+
+#### 1) Bootstrap your registry
+```bash
+cp templates/swarm.tasks.example.json .swarm/tasks.json
+```
+
+#### 2) Configure defaults once
+Edit `.swarm/tasks.json`:
+- `maxRetries`: retries before human escalation
+- `requiredChecks`: checks that must be green (`review`, `ci`, etc.)
+- `requirePr`: force PR gate before done
+
+#### 3) Add one entry per task
+For each delegated task, append a `tasks[]` object with:
+- stable `id` (e.g. `task-013`)
+- clear `title`
+- `branch`
+- `owner` (agent/harness)
+- `session` info (tmux/acp/etc)
+
+#### 4) Drive status transitions
+Use strict lifecycle states:
+- `queued` -> `running` -> `done`
+- or `blocked` when waiting on decision/review
+
+Never jump directly to `done` on PR creation; only after required checks.
+
+#### 5) Keep PR/check fields updated
+As work progresses, update:
+- `pr.number`, `pr.url`, `pr.state`
+- `checks.review`, `checks.ci`
+- `retries`
+- `notes` (short reason for block/failure/retry)
+
+#### 6) Monitoring rule
+Run monitor on schedule (5–10 min):
+- if worker died: retry (up to `maxRetries`)
+- if PR missing for `running` task: flag as `blocked`
+- if checks failed: keep `running/blocked`, not `done`
+- if all checks green + merge-ready: mark `done`
+
+#### Minimal completed-task example
+```json
+{
+  "id": "task-013",
+  "title": "Add health endpoint",
+  "status": "done",
+  "branch": "feat/health-endpoint",
+  "owner": "agent-codex",
+  "session": { "type": "tmux", "name": "swarm-task-013" },
+  "pr": { "number": 128, "url": "https://github.com/org/repo/pull/128", "state": "OPEN" },
+  "checks": { "review": "pass", "ci": "pass" },
+  "retries": 1,
+  "notes": "Merged after review fixes."
+}
+```
 
 ## The 5-Phase Cycle
 
