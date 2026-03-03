@@ -4,7 +4,9 @@
   "defaults": {
     "maxRetries": 3,
     "requiredChecks": ["review", "ci"],
-    "requirePr": true
+    "requirePr": true,
+    "requireMerged": true,
+    "requireDeployValidation": true
   },
   "tasks": [
     {
@@ -26,6 +28,19 @@
         "review": "pending",
         "ci": "pending"
       },
+      "deploy": {
+        "validated": false,
+        "environment": "production",
+        "evidence": null
+      },
+      "ready": {
+        "problem": true,
+        "scope": true,
+        "validation": true,
+        "rollback": true,
+        "nfr": true
+      },
+      "changeClass": "feature",
       "retries": 0,
       "notes": ""
     }

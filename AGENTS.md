@@ -16,6 +16,38 @@ INVESTIGATE → PLAN → EXECUTE → VERIFY
 
 ---
 
+## Delivery Governance Add-ons (High-Rigor Teams)
+
+### Definition of Ready (DoR)
+Before execution starts, the task must include:
+- problem statement with evidence
+- in-scope / out-of-scope files
+- explicit validation commands
+- rollback command
+- NFR targets (latency/cost/security/observability)
+
+If any DoR item is missing, keep task as `queued`.
+
+### Change Classes (proportional process)
+- **hotfix**: fastest safe path + mandatory post-incident review
+- **feature**: full plan/implement/verify flow
+- **refactor**: must include no-regression evidence
+- **risky-infra**: requires staged rollout + rollback drill
+
+### NFR/SLO Gate
+For production-impacting changes, verify and record before done:
+- performance budget impact
+- reliability/SLO impact
+- security impact
+- cost impact
+- observability coverage (logs/metrics/alerts)
+
+### Incident severity matrix
+- **P0**: total outage/data loss, immediate human escalation
+- **P1**: critical degradation, owner + mitigation ETA required
+- **P2**: partial degradation, fix in planned sprint
+- **P3**: minor issue, backlog with owner
+
 ## Phase 1: INVESTIGATE 🔍
 
 **Before writing a single line of code or plan, understand the problem with DATA.**
@@ -176,10 +208,11 @@ Use a cheap monitoring script every 5–10 minutes to avoid expensive LLM pollin
 
 ### Definition of Done (DoD) for agent-completed tasks
 Do **not** mark complete on "PR opened". Done requires:
-- PR opened
+- PR merged to default branch
 - branch synced with default branch
 - required CI checks passing
 - required review gates resolved
+- deploy validation recorded for production path
 - screenshots/evidence attached for UI changes
 
 ### Multi-review policy
