@@ -53,6 +53,22 @@ INVESTIGATE → PLAN → EXECUTE → VERIFY
 5. **Agent assignment** — who does what (if parallelizing)
 6. **Verification criteria** — how we know it's done
 
+### Plan-Mode Protocol (Required)
+For multi-step work, planning and implementation must be split across specialized models:
+
+1. **Claude Code in Plan Mode** drafts the plan (no code changes).
+2. Human/orchestrator approves or edits the plan.
+3. **Codex 5.3** implements exactly the approved plan.
+4. Validation output (build/test/smoke) is attached before PR.
+
+**Non-negotiable rules:**
+- Do not implement before a plan artifact exists.
+- Do not change scope during implementation without re-planning.
+- If Plan Mode tooling is unavailable, emulate the same separation manually:
+  - produce plan first,
+  - freeze scope,
+  - then implement.
+
 **Rules:**
 - If something goes sideways during execution → STOP and re-plan. Don't push through.
 - Write detailed specs upfront to reduce ambiguity for sub-agents.

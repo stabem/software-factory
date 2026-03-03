@@ -185,6 +185,19 @@ INVESTIGATE → PLAN → EXECUTE → VERIFY
 5. **Agent assignment** — who does what (if parallelizing)
 6. **Verification criteria** — how we know it's done
 
+### Plan-Mode Protocol (Required)
+For non-trivial work, enforce model specialization:
+
+1. Run **Claude Code in Plan Mode** to produce the implementation plan (no code edits).
+2. Approve/freeze plan scope.
+3. Run **Codex 5.3** to implement exactly that plan.
+4. Attach build/test/smoke evidence before opening/merging PR.
+
+**Rules:**
+- No implementation before a written plan.
+- Scope changes require returning to Plan Mode.
+- If tool routing is limited, keep the same discipline manually (plan first, then implement).
+
 ### Phase 3: EXECUTE ⚡
 
 **Build the thing. Use sub-agents for parallelism.**
