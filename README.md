@@ -198,6 +198,24 @@ For non-trivial work, enforce model specialization:
 - Scope changes require returning to Plan Mode.
 - If tool routing is limited, keep the same discipline manually (plan first, then implement).
 
+#### Plan -> Implement Handoff Artifact
+Before Codex implementation starts, freeze this handoff block in the task/PR:
+
+1. Approved plan version/hash
+2. In-scope files
+3. Out-of-scope files
+4. Required validation commands
+5. Rollback command
+
+If any item changes, go back to Plan Mode and issue a new handoff.
+
+#### Channel/Runtime Fallback
+When your chat/runtime cannot keep persistent threaded harness sessions (some surfaces do not support thread binding), keep the protocol:
+- run planning as a one-shot **Plan Mode** turn,
+- approve/freeze scope,
+- run implementation as a separate **Codex 5.3** turn,
+- keep both artifacts linked in the PR.
+
 ### Phase 3: EXECUTE ⚡
 
 **Build the thing. Use sub-agents for parallelism.**

@@ -69,6 +69,14 @@ For multi-step work, planning and implementation must be split across specialize
   - freeze scope,
   - then implement.
 
+**Handoff contract (Plan -> Codex):**
+- approved plan version/hash
+- explicit in-scope + out-of-scope files
+- required validation commands
+- rollback command
+
+No Codex implementation starts without this handoff.
+
 **Rules:**
 - If something goes sideways during execution → STOP and re-plan. Don't push through.
 - Write detailed specs upfront to reduce ambiguity for sub-agents.
