@@ -190,6 +190,8 @@ Edit `.swarm/tasks.json`:
 - `maxRetries`: retries before human escalation
 - `requiredChecks`: checks that must be green (`review`, `ci`, etc.)
 - `requirePr`: force PR gate before done
+- `requireMerged`: require merged PR before done
+- `requireDeployValidation`: require deployment validation evidence before done
 
 #### 3) Add one entry per task
 For each delegated task, append a `tasks[]` object with:
@@ -204,7 +206,8 @@ Use strict lifecycle states:
 - `queued` -> `running` -> `done`
 - or `blocked` when waiting on decision/review
 
-Never jump directly to `done` on PR creation; only after required checks.
+Never jump directly to `done` on PR creation; only after required checks,
+merge gate (if enabled), and deploy validation gate (if enabled).
 
 #### 5) Keep PR/check fields updated
 As work progresses, update:
@@ -218,7 +221,8 @@ Run monitor on schedule (5–10 min):
 - if worker died: retry (up to `maxRetries`)
 - if PR missing for `running` task: flag as `blocked`
 - if checks failed: keep `running/blocked`, not `done`
-- if all checks green + merge-ready: mark `done`
+- if checks are green but merge/deploy gates are pending: keep `running`
+- mark `done` only when all required gates are satisfied
 
 #### Minimal completed-task example
 ```json
@@ -229,12 +233,55 @@ Run monitor on schedule (5–10 min):
   "branch": "feat/health-endpoint",
   "owner": "agent-codex",
   "session": { "type": "tmux", "name": "swarm-task-013" },
-  "pr": { "number": 128, "url": "https://github.com/org/repo/pull/128", "state": "OPEN" },
-  "checks": { "review": "pass", "ci": "pass" },
+  "pr": {
+    "number": 128,
+    "url": "https://github.com/org/repo/pull/128",
+    "state": "MERGED",
+    "mergedAt": "2026-02-24T14:31:00Z"
+  },
+  "checks": { "review": "passed", "ci": "passed" },
+  "deploy": {
+    "validated": true,
+    "environment": "production",
+    "evidence": "https://grafana.example.com/d/abc123"
+  },
   "retries": 1,
-  "notes": "Merged after review fixes."
+  "notes": "Merged and validated in production path."
 }
 ```
+
+## Delivery Governance Add-ons (High-Rigor Teams)
+
+### Definition of Ready (DoR)
+Before execution starts, the task must be "ready":
+- problem statement with evidence
+- in-scope / out-of-scope files
+- explicit validation commands
+- rollback command
+- NFR targets (latency/cost/security/observability)
+
+If any DoR item is missing, keep task as `queued`.
+
+### Change Classes (proportional process)
+Use a class per task to scale rigor:
+- **hotfix**: fastest path, mandatory post-incident review
+- **feature**: full plan + verify + PR gate
+- **refactor**: must show no-regression evidence
+- **risky-infra**: requires rollout + rollback drills
+
+### NFR/SLO Gate (mandatory for production-impacting work)
+Before marking done, verify and record:
+- performance budget impact
+- reliability/SLO impact
+- security impact
+- cost impact
+- observability coverage (logs/metrics/alerts)
+
+### Incident Severity Matrix
+- **P0**: total outage/data loss, immediate human escalation
+- **P1**: critical feature degraded, owner + mitigation ETA required
+- **P2**: partial degradation, fix in planned sprint
+- **P3**: minor issue, backlog with owner
 
 ## The 5-Phase Cycle
 
@@ -603,10 +650,10 @@ Additional regressions found and fixed during verify:
 - returns: changed files + command outputs + residual risks
 
 **Definition of done:**
-- PR opened
-- checks green
+- PR merged
+- required checks green
 - review comments resolved
-- production-path verification recorded
+- deploy validation recorded on production path
 
 ---
 
