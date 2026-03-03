@@ -460,6 +460,109 @@ Additional regressions found and fixed during verify:
 
 ---
 
+## More Real-World Scenarios (Copy/Paste)
+
+### Scenario A — Runtime incident on third-party API (503 spikes)
+
+**Investigate**
+- Capture 30–60 min logs with timestamps.
+- Confirm whether failures are internal or upstream (direct `curl` from host + from container).
+- Check if service auto-recovers without restart.
+
+**Plan**
+- Add alert hysteresis (ex: alert only after N consecutive failures).
+- Add classification: `upstream-transient`, `auth-failure`, `internal-bug`.
+- Define rollback: disable new alert rule via env flag.
+
+**Execute**
+- Implement error counters + decay window.
+- Improve log context (`endpoint`, `status`, `retry_count`, `component`).
+- Keep existing execution path unchanged (minimal blast radius).
+
+**Verify**
+- Replay with synthetic 503 bursts.
+- Ensure one-off failures do not page.
+- Ensure sustained failure still pages.
+
+**Learn**
+- Document final thresholds and rationale in `tasks/lessons.md`.
+
+---
+
+### Scenario B — Feature delivery with strict plan/implement split
+
+**Plan Mode output (Claude) must include:**
+- problem + root cause hypothesis
+- exact file list (in/out of scope)
+- implementation checklist
+- validation commands
+- rollback command
+
+**Codex implementation gate:**
+- starts only after plan is approved/frozen
+- cannot add out-of-scope files without re-plan
+- returns: changed files + command outputs + residual risks
+
+**Definition of done:**
+- PR opened
+- checks green
+- review comments resolved
+- production-path verification recorded
+
+---
+
+### Scenario C — Regression after deploy
+
+**Investigate first (no hotfix guessing):**
+- compare pre/post deploy metrics
+- identify first bad commit/release window
+- check cache/token invalidation side effects
+
+**Plan**
+- immediate mitigation (feature flag/revert)
+- permanent fix
+- post-fix validation suite
+
+**Execute**
+- apply mitigation in smallest possible diff
+- ship permanent fix behind guard if needed
+
+**Verify**
+- regression test reproducer now passes
+- no new errors in adjacent flows
+
+**Learn**
+- add a new guardrail/test so this exact failure cannot recur silently
+
+---
+
+## How to Implement This Methodology in a New Repo (Detailed)
+
+### Day 0 (bootstrap)
+1. Add `AGENTS.md` to repo root.
+2. Create `tasks/todo.md` and `tasks/lessons.md`.
+3. Add PR template with: root cause, changed files, validation, rollback.
+4. Enable required checks in branch protection.
+
+### Day 1 (first task)
+1. Run one full cycle: INVESTIGATE → PLAN → EXECUTE → VERIFY.
+2. Keep plan/implement artifacts in PR body.
+3. Record at least one lesson in `tasks/lessons.md`.
+
+### Week 1 hardening
+1. Introduce task packet contract for delegated work.
+2. Add deterministic monitor (script/cron) for worker/PR/check status.
+3. Cap parallel workers (default max 3) and enforce file ownership boundaries.
+4. Track cycle time + escaped defects; tune process with evidence.
+
+### Golden operating rules
+- No plan -> no implementation.
+- No evidence -> task not done.
+- No PR -> not shipped.
+- If scope changes -> back to Plan Mode.
+
+---
+
 ## License
 
 MIT — use it however you want.
