@@ -411,24 +411,52 @@ From real production experience:
 
 ## Real-World Example
 
-Here's how this methodology was used to fix a 49% user drop-off in a SaaS API:
+A concrete run from production, using the exact workflow above.
 
-**INVESTIGATE:** Queried DB → 17 of 35 users never verified email → all got 403 on every API call. The verification token was generated at signup but **never emailed**.
+### Problem
+New users were dropping before activation.
 
-**PLAN:** Created 3 parallel sub-agents:
-- `p0-backend` — verification email, improved 403 message, resend endpoint
-- `p0-frontend` — verification banner, getting started checklist, demo fallback
-- `p1p2-backend` — reminder emails, milestone emails, win-back emails
+### Baseline (Investigate)
+- Cohort query: **17 / 35 users (49%)** never verified email.
+- All affected users got **403** on first API calls.
+- Root cause: token was created at signup, but verification email was never sent.
 
-Each agent had explicit file ownership — no overlapping files.
+### Plan (before code)
+Approved plan split into isolated packets:
+- `p0-backend`: send verification email + improve 403 error payload + resend endpoint
+- `p0-frontend`: verification banner + onboarding checklist + demo fallback
+- `p1p2-backend`: reminder/milestone/win-back email jobs
 
-**EXECUTE:** All 3 agents ran in parallel (~2 min each). One agent introduced a type assertion bug in a shared file — caught because we have the "one file owner" rule and the other agent's build failed.
+Guardrails used:
+- one file owner per packet
+- explicit in-scope / out-of-scope files
+- build/test commands attached to each packet
 
-**VERIFY:** Full E2E test: signup → emails arrived → clicked verify link → dashboard updated → API calls worked. Found 3 more bugs (cache not invalidating, verify link routing through SPA, missing field in API response). Fixed all.
+### Execute
+- Agents ran in parallel on disjoint scopes.
+- One packet hit a type assertion regression; detected immediately by build evidence and fixed before integration.
 
-**LEARN:** 5 new lessons added to `tasks/lessons.md`, 3 promoted to the pitfalls table.
+### Verify (evidence-based)
+End-to-end flow tested on production path:
+1. signup
+2. verification email delivery
+3. verification link resolution
+4. dashboard state refresh
+5. API access works after verify
 
-**Result:** 0% → 100% of new signups now receive verification email. Drop-off eliminated.
+Additional regressions found and fixed during verify:
+- stale auth/cache state after verification
+- SPA route intercepting verify callback
+- frontend consuming missing API field without guard
+
+### Learn
+- Added 5 lessons to `tasks/lessons.md`
+- Promoted 3 recurring failures to **Common Pitfalls**
+
+### Outcome
+- Verification delivery: **0% -> 100%** for new signups in validation window
+- Activation blocker removed
+- Rollout shipped via PR gate with review + green checks
 
 ---
 
