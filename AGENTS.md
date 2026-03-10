@@ -301,6 +301,8 @@ When using multiple guards/agents in the same PR flow (e.g., Security Guard + QA
 ### QA Guard contract (recommended)
 Primary phase: **VERIFY**
 
+Bootstrap tip: copy `templates/CLAUDE.qa.md` into project root as `CLAUDE.md` and fill repo commands.
+
 Must produce:
 1. exact test commands executed
 2. pass/fail evidence

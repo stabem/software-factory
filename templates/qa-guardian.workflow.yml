@@ -1,0 +1,55 @@
+name: QA Guardian (Claude)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  qa-guardian:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Validate Claude auth secret
+        run: |
+          if [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ] && [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "::error::Missing auth secret. Configure CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: <INSTALL_COMMAND>
+
+      - name: Baseline tests
+        run: <TEST_COMMAND>
+        continue-on-error: true
+
+      - name: Claude Code QA review
+        uses: anthropics/claude-code-action@v1
+        with:
+          # Prefer OAuth token when using Claude Pro/Max
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          use_sticky_comment: true
+          track_progress: true
+          prompt: |
+            Read and follow repository root `CLAUDE.md`.
+            Execute the QA Guardian contract for this PR.
+            Run <TEST_COMMAND> and include evidence in the PR comment.
+          claude_args: |
+            --model claude-sonnet-4-6
+            --max-turns 40
+            --dangerously-skip-permissions
+            --allowedTools Read,Glob,Grep,LS,Edit,Write,MultiEdit,Bash(<TEST_COMMAND>)
+            --disallowedTools TaskOutput,KillTask

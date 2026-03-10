@@ -689,6 +689,8 @@ Additional regressions found and fixed during verify:
 2. Create `tasks/todo.md` and `tasks/lessons.md`.
 3. Add PR template with: root cause, changed files, validation, rollback.
 4. Enable required checks in branch protection.
+5. If using QA guard, copy `templates/CLAUDE.qa.md` to repo root as `CLAUDE.md` and fill repo commands.
+6. If using Claude QA workflow, start from `templates/qa-guardian.workflow.yml`.
 
 ### Day 1 (first task)
 1. Run one full cycle: INVESTIGATE → PLAN → EXECUTE → VERIFY.
@@ -751,6 +753,9 @@ No evidence = QA not complete.
 - Make QA workflow load and follow `CLAUDE.md` (or equivalent role contract) from repo root.
 - Allow only tools needed for QA (read/edit + test commands).
 - Force visible PR comment output (sticky comment/progress) so humans can audit what QA actually did.
+- Use framework templates for fast bootstrap:
+  - `templates/CLAUDE.qa.md`
+  - `templates/qa-guardian.workflow.yml`
 
 ---
 
