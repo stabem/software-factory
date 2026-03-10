@@ -265,6 +265,7 @@ Org standard:
 - Use reusable workflows from `stabem/.github` when available
 - Require status check `review`
 - Require at least one approval
+- Prefer adding a policy gate check using `scripts/check-factory-gate.sh` to enforce PR body contract
 
 For `bybit-agents` and `content-api`, this step is non-negotiable.
 
@@ -322,6 +323,14 @@ No evidence = QA not done.
 **Files:**
 - `tasks/todo.md` — active checklist (one per workspace or per-project)
 - `tasks/lessons.md` — accumulated lessons learned (never delete, only add)
+- `tasks/plan.md` — plan contract (DoR/DoD + scope + validation + rollback)
+
+**Bootstrap templates available:**
+- `templates/PLAN.md` → copy to `tasks/plan.md`
+- `templates/CLAUDE.qa.md` → copy to `CLAUDE.md`
+- `templates/qa-guardian.workflow.yml`
+- `templates/factory-policy.workflow.yml`
+- `scripts/check-factory-gate.sh`
 
 **Workflow:**
 1. Write plan to `tasks/todo.md` with checkable items
