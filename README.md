@@ -709,6 +709,51 @@ Additional regressions found and fixed during verify:
 
 ---
 
+## QA Guard Role Contract (No Inter-Agent Chat)
+
+Use this when you run a second guard dedicated to quality (for example, Claude Code QA).
+
+### Why
+You want multiple agents/guards to work in the same PR flow **without talking to each other**.
+
+### Contract
+Each agent must infer its role from repository files and the workflow prompt, not from agent-to-agent conversation.
+
+#### QA Guard position in the 5-phase cycle
+- Primary phase: **VERIFY**
+- Supporting phases: **INVESTIGATE → PLAN (coverage plan) → EXECUTE (tests only) → LEARN (residual risks)**
+
+#### Inputs (must be self-sufficient)
+1. PR diff (changed files)
+2. Existing tests and test commands
+3. Process contract file (for example `CLAUDE.md` / `REVIEW.md`)
+
+#### Required QA output
+- Tests executed (exact commands)
+- Results (pass/fail, key failures)
+- Coverage assessment for changed behavior:
+  - happy path
+  - error path
+  - regression risk
+- Missing tests (explicit list)
+- Residual risk level (low/medium/high)
+
+No evidence = QA not complete.
+
+#### Hard boundaries
+- No architecture refactor under QA role
+- No deploy actions
+- No hidden coordination with other agents
+- If scope ambiguity exists, report it in QA output and continue best-effort with explicit assumptions
+
+### Recommended implementation pattern
+- Keep security guard and QA guard as separate workflows/checks.
+- Make QA workflow load and follow `CLAUDE.md` (or equivalent role contract) from repo root.
+- Allow only tools needed for QA (read/edit + test commands).
+- Force visible PR comment output (sticky comment/progress) so humans can audit what QA actually did.
+
+---
+
 ## License
 
 MIT — use it however you want.

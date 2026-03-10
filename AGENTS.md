@@ -290,6 +290,31 @@ After ANY correction, failure, or unexpected behavior:
 
 ---
 
+## Guard Role Contracts (No Inter-Agent Communication)
+
+When using multiple guards/agents in the same PR flow (e.g., Security Guard + QA Guard), each one must be independently deterministic.
+
+### Rule
+- **No agent-to-agent conversation.**
+- Every guard reads its role contract from repo files (`CLAUDE.md`, `REVIEW.md`, workflow prompt) and executes autonomously.
+
+### QA Guard contract (recommended)
+Primary phase: **VERIFY**
+
+Must produce:
+1. exact test commands executed
+2. pass/fail evidence
+3. coverage judgment for changed behavior (happy/error/regression)
+4. explicit missing tests (if any)
+5. residual risk level
+
+Must NOT:
+- refactor architecture outside QA scope
+- deploy
+- block waiting for other agents
+
+No evidence = QA not done.
+
 ## Task Management
 
 **Files:**
