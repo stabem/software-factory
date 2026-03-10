@@ -24,6 +24,28 @@ A drop-in methodology for any project where AI agents build software. It works w
 
 That's it. Everything else is optional.
 
+### One-command bootstrap (recommended)
+
+Instead of copying files manually, use:
+
+```bash
+./scripts/bootstrap-factory.sh /path/to/target
+```
+
+Windows PowerShell:
+
+```powershell
+.\scripts\bootstrap-factory.ps1 -TargetDir C:\path\to\target
+```
+
+This bootstraps:
+- `AGENTS.md`
+- `tasks/todo.md`, `tasks/lessons.md`, `tasks/plan.md`
+- `CLAUDE.md` (QA contract template)
+- `.github/workflows/qa-guardian.yml`
+- `.github/workflows/factory-policy.yml`
+- `scripts/check-factory-gate.sh`
+
 ---
 
 ## PR-First Delivery Loop (Required)
@@ -708,6 +730,19 @@ Additional regressions found and fixed during verify:
 - No evidence -> task not done.
 - No PR -> not shipped.
 - If scope changes -> back to Plan Mode.
+
+## Policy-as-Code Gate (PR Body Contract)
+
+Use `templates/factory-policy.workflow.yml` + `scripts/check-factory-gate.sh` to enforce minimum Software Factory requirements directly in CI.
+
+Current checks include:
+- `## Root cause` section
+- `## Validation` section
+- `## Rollback` section
+- valid `Change class: hotfix|feature|refactor|risky-infra`
+- explicit build/test evidence in PR description
+
+This prevents "green code, weak process" merges.
 
 ---
 
