@@ -375,6 +375,7 @@ No evidence = QA not done.
 
 ## References
 
+- [Document System](docs/DOCUMENT_SYSTEM.md)
 - [Verification Model](docs/VERIFICATION_MODEL.md)
 - [State Machine](docs/STATE_MACHINE.md)
 - [Swarm Runbook](docs/SWARM_RUNBOOK.md)
