@@ -318,6 +318,12 @@ Must NOT:
 
 No evidence = QA not done.
 
+## Reference Docs
+
+- [Verification Model](docs/VERIFICATION_MODEL.md)
+- [State Machine](docs/STATE_MACHINE.md)
+- [Swarm Runbook](docs/SWARM_RUNBOOK.md)
+
 ## Task Management
 
 **Files:**

@@ -52,6 +52,8 @@ if ($Mode -eq 'factory') {
   Copy-TemplateFile -Source (Join-Path $root "templates\swarm.tasks.example.json") -Destination (Join-Path $target "templates\swarm.tasks.example.json") -ForceCopy:$Force
   Copy-TemplateFile -Source (Join-Path $root "scripts\check-swarm.sh") -Destination (Join-Path $target "scripts\check-swarm.sh") -ForceCopy:$Force
   Copy-TemplateFile -Source (Join-Path $root "docs\SWARM_RUNBOOK.md") -Destination (Join-Path $target "docs\SWARM_RUNBOOK.md") -ForceCopy:$Force
+  Copy-TemplateFile -Source (Join-Path $root "docs\VERIFICATION_MODEL.md") -Destination (Join-Path $target "docs\VERIFICATION_MODEL.md") -ForceCopy:$Force
+  Copy-TemplateFile -Source (Join-Path $root "docs\STATE_MACHINE.md") -Destination (Join-Path $target "docs\STATE_MACHINE.md") -ForceCopy:$Force
 }
 
 Write-Host ""

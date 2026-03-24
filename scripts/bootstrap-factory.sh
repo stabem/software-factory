@@ -9,7 +9,8 @@ MODE="standard"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --mode)
-      MODE="${2:-standard}"
+      [[ -z "${2:-}" || "${2:-}" == --* ]] && { echo "Error: --mode requires a value" >&2; exit 1; }
+      MODE="$2"
       shift 2
       ;;
     --force)
@@ -26,6 +27,11 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+case "$MODE" in
+  fast|standard|factory) ;;
+  *) echo "Invalid --mode: $MODE" >&2; exit 1 ;;
+esac
 
 mkdir -p "$TARGET_DIR"
 TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
@@ -62,6 +68,8 @@ if [[ "$MODE" == "factory" ]]; then
   copy_file "$ROOT_DIR/templates/swarm.tasks.example.json" "$TARGET_DIR/templates/swarm.tasks.example.json"
   copy_file "$ROOT_DIR/scripts/check-swarm.sh" "$TARGET_DIR/scripts/check-swarm.sh"
   copy_file "$ROOT_DIR/docs/SWARM_RUNBOOK.md" "$TARGET_DIR/docs/SWARM_RUNBOOK.md"
+  copy_file "$ROOT_DIR/docs/VERIFICATION_MODEL.md" "$TARGET_DIR/docs/VERIFICATION_MODEL.md"
+  copy_file "$ROOT_DIR/docs/STATE_MACHINE.md" "$TARGET_DIR/docs/STATE_MACHINE.md"
 fi
 
 chmod +x "$TARGET_DIR/scripts/check-factory-gate.sh" 2>/dev/null || true

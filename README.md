@@ -51,6 +51,11 @@ Use it together with the existing **change classes**:
 
 This bootstraps the existing factory structure and keeps `.factory/` as the canonical home for config/state.
 
+Mode outputs at a glance:
+- `fast`: `AGENTS.md`, `tasks/todo.md`, `tasks/lessons.md`, `tasks/plan.md`
+- `standard`: `fast` + `CLAUDE.md`, QA/policy workflows, factory gate script
+- `factory`: `standard` + swarm registry/monitor assets, runbook, verification/state docs
+
 ---
 
 ## PR-First Delivery Loop (Required)
