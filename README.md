@@ -29,22 +29,27 @@ That's it. Everything else is optional.
 Instead of copying files manually, use:
 
 ```bash
-./scripts/bootstrap-factory.sh /path/to/target
+./scripts/bootstrap-factory.sh /path/to/target --mode standard
 ```
 
 Windows PowerShell:
 
 ```powershell
-.\scripts\bootstrap-factory.ps1 -TargetDir C:\path\to\target
+.\scripts\bootstrap-factory.ps1 -TargetDir C:\path\to\target -Mode standard
 ```
 
-This bootstraps:
-- `AGENTS.md`
-- `tasks/todo.md`, `tasks/lessons.md`, `tasks/plan.md`
-- `CLAUDE.md` (QA contract template)
-- `.github/workflows/qa-guardian.yml`
-- `.github/workflows/factory-policy.yml`
-- `scripts/check-factory-gate.sh`
+Supported modes:
+- `fast` — minimal bootstrap for small/low-risk work
+- `standard` — recommended default
+- `factory` — full bootstrap for high-rigor repos
+
+Mode controls operational rigor, not the nature of the change.
+Use it together with the existing **change classes**:
+- `fast` usually maps to `hotfix`
+- `standard` usually maps to `feature` / `refactor`
+- `factory` usually maps to `risky-infra` or critical multi-agent work
+
+This bootstraps the existing factory structure and keeps `.factory/` as the canonical home for config/state.
 
 ---
 
