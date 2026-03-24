@@ -2,19 +2,43 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TARGET_DIR="${1:-.}"
-FORCE="${2:-}"
+TARGET_DIR="."
+FORCE=""
+MODE="standard"
 
-if [[ "$TARGET_DIR" == "--force" ]]; then
-  TARGET_DIR="."
-  FORCE="--force"
-fi
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --mode)
+      [[ -z "${2:-}" || "${2:-}" == --* ]] && { echo "Error: --mode requires a value" >&2; exit 1; }
+      MODE="$2"
+      shift 2
+      ;;
+    --force)
+      FORCE="--force"
+      shift
+      ;;
+    --v2)
+      MODE="factory"
+      shift
+      ;;
+    -h|--help)
+      echo "Usage: bootstrap-factory.sh [target-dir] [--mode fast|standard|factory] [--v2] [--force]"
+      exit 0
+      ;;
+    *)
+      TARGET_DIR="$1"
+      shift
+      ;;
+  esac
+done
 
-TARGET_DIR="$(cd "$TARGET_DIR" 2>/dev/null && pwd || true)"
-if [[ -z "$TARGET_DIR" ]]; then
-  echo "❌ Target directory not found"
-  exit 1
-fi
+case "$MODE" in
+  fast|standard|factory) ;;
+  *) echo "Invalid --mode: $MODE" >&2; exit 1 ;;
+esac
+
+mkdir -p "$TARGET_DIR"
+TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
 
 copy_file() {
   local src="$1"
@@ -30,21 +54,39 @@ copy_file() {
   echo "✅ copied: $dst"
 }
 
-echo "Bootstrapping Software Factory into: $TARGET_DIR"
+echo "Bootstrapping Software Factory into: $TARGET_DIR (mode: $MODE)"
 
 copy_file "$ROOT_DIR/AGENTS.md" "$TARGET_DIR/AGENTS.md"
 copy_file "$ROOT_DIR/tasks/todo.md" "$TARGET_DIR/tasks/todo.md"
 copy_file "$ROOT_DIR/tasks/lessons.md" "$TARGET_DIR/tasks/lessons.md"
 copy_file "$ROOT_DIR/templates/PLAN.md" "$TARGET_DIR/tasks/plan.md"
-copy_file "$ROOT_DIR/templates/CLAUDE.qa.md" "$TARGET_DIR/CLAUDE.md"
-copy_file "$ROOT_DIR/templates/qa-guardian.workflow.yml" "$TARGET_DIR/.github/workflows/qa-guardian.yml"
-copy_file "$ROOT_DIR/templates/factory-policy.workflow.yml" "$TARGET_DIR/.github/workflows/factory-policy.yml"
-copy_file "$ROOT_DIR/scripts/check-factory-gate.sh" "$TARGET_DIR/scripts/check-factory-gate.sh"
+
+if [[ "$MODE" != "fast" ]]; then
+  copy_file "$ROOT_DIR/templates/CLAUDE.qa.md" "$TARGET_DIR/CLAUDE.md"
+  copy_file "$ROOT_DIR/templates/qa-guardian.workflow.yml" "$TARGET_DIR/.github/workflows/qa-guardian.yml"
+  copy_file "$ROOT_DIR/templates/factory-policy.workflow.yml" "$TARGET_DIR/.github/workflows/factory-policy.yml"
+  copy_file "$ROOT_DIR/scripts/check-factory-gate.sh" "$TARGET_DIR/scripts/check-factory-gate.sh"
+fi
+
+if [[ "$MODE" == "factory" ]]; then
+  copy_file "$ROOT_DIR/templates/swarm.tasks.example.json" "$TARGET_DIR/.swarm/tasks.json"
+  copy_file "$ROOT_DIR/scripts/check-swarm.sh" "$TARGET_DIR/scripts/check-swarm.sh"
+  copy_file "$ROOT_DIR/docs/SWARM_RUNBOOK.md" "$TARGET_DIR/docs/SWARM_RUNBOOK.md"
+  copy_file "$ROOT_DIR/docs/VERIFICATION_MODEL.md" "$TARGET_DIR/docs/VERIFICATION_MODEL.md"
+  copy_file "$ROOT_DIR/docs/STATE_MACHINE.md" "$TARGET_DIR/docs/STATE_MACHINE.md"
+fi
 
 chmod +x "$TARGET_DIR/scripts/check-factory-gate.sh" 2>/dev/null || true
+chmod +x "$TARGET_DIR/scripts/check-swarm.sh" 2>/dev/null || true
 
 echo ""
 echo "🎯 Next steps"
-echo "1) Fill commands/placeholders in tasks/plan.md and CLAUDE.md"
-echo "2) Configure required secrets (CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY)"
-echo "3) Set branch protection to require: Factory Policy Gate + QA/Security guards"
+echo "1) Fill commands/placeholders in tasks/plan.md"
+if [[ "$MODE" != "fast" ]]; then
+  echo "2) Fill commands/placeholders in CLAUDE.md"
+  echo "3) Configure required secrets (CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY)"
+  echo "4) Set branch protection to require: Factory Policy Gate + QA/Security guards"
+fi
+if [[ "$MODE" == "factory" ]]; then
+  echo "5) Initialize swarm registry/monitor assets if needed"
+fi
