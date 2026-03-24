@@ -207,6 +207,8 @@ Default path should be autonomous.
 - `templates/swarm.tasks.example.json`
 - `scripts/check-swarm.sh`
 - `docs/SWARM_RUNBOOK.md`
+
+### Methodology docs
 - `docs/DOCUMENT_SYSTEM.md`
 - `docs/VERIFICATION_MODEL.md`
 - `docs/STATE_MACHINE.md`

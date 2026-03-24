@@ -5,6 +5,17 @@ Software Factory uses documents as workflow contracts, not as passive notes. Eac
 ## Core Principle
 Documents are part of the operating system of the repo.
 
+## Scope
+This document covers the **core workflow documents** that agents and humans actively produce and consume during planning, execution, verification, and swarm operation.
+
+It does **not** attempt to fully contract every template or reference file in the repo.
+Those belong to supporting layers:
+- `templates/` = bootstrap/source artifacts for repo setup
+- `docs/` reference guides = methodology and operator guidance
+- agent contract files = role-specific execution contracts
+
+Rule: this file should stay focused on the documents that shape live workflow behavior.
+
 A good document:
 - has a clear producer
 - has clear consumers
@@ -101,15 +112,6 @@ Artifacts that define or capture proof.
 - If a document cannot be read quickly in a single agent pass, it is too big.
 - Prefer summaries plus references instead of giant catch-all docs.
 - Avoid duplicate sections that drift independently.
-
-## Cross-Document Rules
-- `AGENTS.md` defines behavior.
-- `tasks/plan.md` defines current implementation scope.
-- `tasks/todo.md` tracks active execution.
-- `tasks/lessons.md` captures durable learning.
-- `docs/VERIFICATION_MODEL.md` defines proof standards.
-- `docs/STATE_MACHINE.md` defines workflow transitions.
-- `.swarm/tasks.json` tracks machine state for delegated work.
 
 ## Anti-Patterns for the System
 - using chat history as the primary workflow memory
