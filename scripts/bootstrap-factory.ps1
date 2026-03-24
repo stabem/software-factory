@@ -2,8 +2,11 @@ param(
   [string]$TargetDir = ".",
   [ValidateSet('fast','standard','factory')]
   [string]$Mode = 'standard',
+  [switch]$V2,
   [switch]$Force
 )
+
+if ($V2) { $Mode = 'factory' }
 
 $ErrorActionPreference = 'Stop'
 
@@ -49,7 +52,7 @@ if ($Mode -ne 'fast') {
 }
 
 if ($Mode -eq 'factory') {
-  Copy-TemplateFile -Source (Join-Path $root "templates\swarm.tasks.example.json") -Destination (Join-Path $target "templates\swarm.tasks.example.json") -ForceCopy:$Force
+  Copy-TemplateFile -Source (Join-Path $root "templates\swarm.tasks.example.json") -Destination (Join-Path $target ".swarm\tasks.json") -ForceCopy:$Force
   Copy-TemplateFile -Source (Join-Path $root "scripts\check-swarm.sh") -Destination (Join-Path $target "scripts\check-swarm.sh") -ForceCopy:$Force
   Copy-TemplateFile -Source (Join-Path $root "docs\SWARM_RUNBOOK.md") -Destination (Join-Path $target "docs\SWARM_RUNBOOK.md") -ForceCopy:$Force
   Copy-TemplateFile -Source (Join-Path $root "docs\VERIFICATION_MODEL.md") -Destination (Join-Path $target "docs\VERIFICATION_MODEL.md") -ForceCopy:$Force

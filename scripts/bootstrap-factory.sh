@@ -17,8 +17,12 @@ while [[ $# -gt 0 ]]; do
       FORCE="--force"
       shift
       ;;
+    --v2)
+      MODE="factory"
+      shift
+      ;;
     -h|--help)
-      echo "Usage: bootstrap-factory.sh [target-dir] [--mode fast|standard|factory] [--force]"
+      echo "Usage: bootstrap-factory.sh [target-dir] [--mode fast|standard|factory] [--v2] [--force]"
       exit 0
       ;;
     *)
@@ -65,7 +69,7 @@ if [[ "$MODE" != "fast" ]]; then
 fi
 
 if [[ "$MODE" == "factory" ]]; then
-  copy_file "$ROOT_DIR/templates/swarm.tasks.example.json" "$TARGET_DIR/templates/swarm.tasks.example.json"
+  copy_file "$ROOT_DIR/templates/swarm.tasks.example.json" "$TARGET_DIR/.swarm/tasks.json"
   copy_file "$ROOT_DIR/scripts/check-swarm.sh" "$TARGET_DIR/scripts/check-swarm.sh"
   copy_file "$ROOT_DIR/docs/SWARM_RUNBOOK.md" "$TARGET_DIR/docs/SWARM_RUNBOOK.md"
   copy_file "$ROOT_DIR/docs/VERIFICATION_MODEL.md" "$TARGET_DIR/docs/VERIFICATION_MODEL.md"

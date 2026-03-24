@@ -318,12 +318,6 @@ Must NOT:
 
 No evidence = QA not done.
 
-## Reference Docs
-
-- [Verification Model](docs/VERIFICATION_MODEL.md)
-- [State Machine](docs/STATE_MACHINE.md)
-- [Swarm Runbook](docs/SWARM_RUNBOOK.md)
-
 ## Task Management
 
 **Files:**
@@ -377,3 +371,11 @@ No evidence = QA not done.
 | PR opened ≠ task complete | Enforce DoD with CI + review + sync checks before merge. |
 | Monitoring loop burns tokens | Prefer deterministic scripts + registry checks over LLM polling. |
 | Swap/memory pressure from too many workers | Set host-level concurrency limits and stagger heavy build/test phases. |
+---
+
+## References
+
+- [Verification Model](docs/VERIFICATION_MODEL.md)
+- [State Machine](docs/STATE_MACHINE.md)
+- [Swarm Runbook](docs/SWARM_RUNBOOK.md)
+
