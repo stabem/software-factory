@@ -35,6 +35,24 @@ INVESTIGATE → PLAN → EXECUTE → VERIFY
 
 ---
 
+## Artifact System
+
+This framework operates through artifacts, not loose conversation context.
+
+Artifacts are contracts:
+- `PROJECT.md` defines current product reality
+- `DECISIONS.md` locks durable decisions
+- `CONTEXT.md` freezes phase-specific decisions and boundaries
+- `RESEARCH.md` captures domain and external knowledge
+- `CODEBASE_MAP.md` captures brownfield structure and conventions
+- `PLAN.md` is an executable implementation contract
+- `SUMMARY.md` is factual execution output
+- `VALIDATION.md` defines what must be proven
+- `UAT.md` captures human-only verification
+- `STATE.md` tracks current workflow position and next valid moves
+
+Rule: every stage must consume and produce the right artifacts. Do not rely on chat history as the primary workflow memory.
+
 ## Phase 2: PLAN 📋
 
 **Write a plan BEFORE touching code. The plan is a contract.**
@@ -91,7 +109,100 @@ INVESTIGATE → PLAN → EXECUTE → VERIFY
 - [Patterns to avoid]
 ```
 
+
+## Orchestrator-First Swarm Layer 🤖
+
+Treat the assistant as an **orchestrator** (not the coder of every task).
+
+### Operating model
+- Main orchestrator receives business request, clarifies outcome, and designs the execution plan.
+- Work is split into focused task packets and delegated to specialized agents/tools.
+- Orchestrator validates, integrates, and decides ship/no-ship based on evidence.
+
+### Task Packet Contract (required for every delegated task)
+1. **Outcome** — exact expected result
+2. **Scope** — files/services in scope
+3. **Out of scope** — explicit do-not-touch list
+4. **Validation** — exact build/test commands + expected signals
+5. **Rollback note** — how to revert safely
+
+### Model/Agent Routing Rules
+- **Architecture/risk-sensitive tasks** → strongest reasoning model/agent.
+- **Mechanical refactors/migrations** → fast code model/agent.
+- **Research/exploration** → cheap parallel workers, then synthesis by orchestrator.
+- Always log *why* a model/agent was chosen in PR notes for repeatability.
+
+### Concurrency Budget
+- Run parallel agents only when file ownership is disjoint.
+- Define a max concurrent worker count per repo (default 3).
+- If integration conflicts rise, reduce parallelism before changing code strategy.
+
+### Evidence-First Completion
+A delegated task is complete only when it returns:
+- changed file list
+- test/build output
+- risk notes
+- rollback command
+
+No evidence = not done.
+
 ---
+---
+
+
+## Recursive Delivery Loop (Swarm Ops) ♻️
+
+For high-velocity repos, define an explicit machine-run loop around PR delivery.
+
+### Registry-driven orchestration
+- Keep a lightweight task registry (`.swarm/tasks.json`) with status (`queued|running|done|blocked`), branch, PR, checks.
+- Agents update registry state as they progress.
+- Orchestrator reads registry to decide interventions.
+
+### Deterministic monitor (cron-friendly)
+Use a cheap monitoring script every 5–10 minutes to avoid expensive LLM polling:
+- verify worker session/process is alive
+- verify PR exists for active branch
+- verify CI/check statuses
+- verify blocking review comments
+- auto-respawn failed worker up to N retries (default 3)
+- alert human only when decision is required
+
+### Definition of Done (DoD) for agent-completed tasks
+Do **not** mark complete on "PR opened". Done requires:
+- PR opened
+- branch synced with default branch
+- required CI checks passing
+- required review gates resolved
+- screenshots/evidence attached for UI changes
+
+### Multi-review policy
+Use complementary reviewers (not duplicates):
+- one reviewer optimized for correctness/edge cases
+- one reviewer optimized for security/scalability
+- one reviewer as tie-breaker / sanity check
+
+Rule: classify comments as `critical` vs `nice-to-have`; block only on critical.
+
+### Resource-aware parallelism
+- Parallel agents are constrained by RAM/CPU/IO, not just model quota.
+- Set per-host limits (max active workers, max concurrent builds/tests).
+- If swap pressure or CI flakiness rises, reduce concurrency before changing architecture.
+
+---
+## Outcome Verification
+
+Task completion is not enough.
+
+Every significant change must be verified against:
+1. Goal
+2. Observable truths
+3. Required artifacts
+4. Critical links
+5. Evidence commands
+6. Human checks (when necessary)
+
+A task is not complete because a file exists or a build passes. It is complete only when the intended behavior is proven.
 
 ## Phase 4: VERIFY ✅
 
@@ -112,6 +223,33 @@ INVESTIGATE → PLAN → EXECUTE → VERIFY
 
 ---
 
+## Phase 4.5: PR GATE 🔐 (Mandatory)
+
+After implementation/verification, PR is required before deploy:
+
+1. Create branch from default branch (`main` or `master`)
+2. Commit scoped changes
+3. Push and open PR
+4. Wait for Guardian/Codex automated review
+5. Address all requested changes
+6. Re-run review until no blocking findings
+7. Merge after checks pass
+8. Deploy only from merged default branch
+
+Org standard:
+- Use reusable workflows from `stabem/.github` when available
+- Require status check `review`
+- Require at least one approval
+
+For `bybit-agents` and `content-api`, this step is non-negotiable.
+
+## Pricing/Billing Guardrail 🔒
+
+- Never create/rename/remove commercial plans without explicit owner approval.
+- Do not infer new Stripe SKUs from technical rate-limit/quota work.
+- Before touching plan logic, validate current project pricing and billing wiring.
+- PR must explicitly state: "No new commercial plan created" when only technical limits are adjusted.
+
 ## Phase 5: LEARN 🧠 (Always)
 
 **Every mistake becomes a rule. Every surprise becomes a lesson.**
@@ -126,6 +264,40 @@ After ANY correction, failure, or unexpected behavior:
 3. **Promote patterns** — if a lesson applies broadly, add it to the pitfalls table
 
 ---
+
+## Operating Modes
+
+### FAST
+Use for small, low-risk work:
+- 1-2 files
+- no architectural change
+- no swarm
+- minimal validation
+
+### STANDARD
+Use for normal feature/fix work:
+- investigate
+- plan
+- execute
+- verify
+- PR gate
+
+### FACTORY
+Use for high-scope or high-risk work:
+- multiple files/services
+- waves or sub-agents
+- auth/billing/security/db/infra
+- explicit artifact contracts
+- stronger verification and PR governance
+
+## Brownfield Workflow
+
+For existing codebases:
+1. Map the codebase first
+2. Infer assumptions from real code patterns
+3. Confirm/correct assumptions
+4. Freeze phase context before planning
+5. Plan from established patterns, not from scratch
 
 ## Task Management
 
@@ -164,3 +336,11 @@ After ANY correction, failure, or unexpected behavior:
 | Pushing through when plan fails | STOP and re-plan. Don't keep pushing. |
 | "Mental notes" about things to remember | Write it to a file. Text > Brain. |
 | Cache/state not refreshed after mutation | Invalidate caches + refresh tokens after state changes. |
+| Orchestrator becomes bottleneck | Force task packets + evidence contracts; orchestrator reviews, not rewrites. |
+| Too many parallel agents create merge noise | Cap concurrency (default 3) and enforce disjoint ownership. |
+| Agent/model choice is random | Route by task type and record rationale in PR notes. |
+| Delegated work marked done without proof | Require changed files + test logs + rollback note. |
+
+| PR opened ≠ task complete | Enforce DoD with CI + review + sync checks before merge. |
+| Monitoring loop burns tokens | Prefer deterministic scripts + registry checks over LLM polling. |
+| Swap/memory pressure from too many workers | Set host-level concurrency limits and stagger heavy build/test phases. |

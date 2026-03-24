@@ -15,14 +15,67 @@ A drop-in methodology for any project where AI agents build software. It works w
 
 **Core idea:** Treat AI agents like junior-to-mid engineers on your team. They're fast but need clear specs, explicit boundaries, and verification. This system provides the structure.
 
+Software Factory combines:
+- GSD-grade context engineering
+- data-first investigation
+- explicit outcome verification
+- PR-first governance
+- evidence-based completion
+
 ## Quick Start
 
-1. Copy `AGENTS.md` into your project root
-2. Create `tasks/todo.md` and `tasks/lessons.md`
-3. Start following the 5-phase cycle
-4. Use **PR-first delivery**: every implementation ends in a Pull Request (no direct pushes to main)
+### Bootstrap a new or existing repo
 
-That's it. Everything else is optional.
+```bash
+./scripts/bootstrap-factory.sh . --mode standard
+```
+
+Examples:
+
+```bash
+# lightweight setup
+./scripts/bootstrap-factory.sh . --mode fast
+
+# recommended default
+./scripts/bootstrap-factory.sh . --mode standard
+
+# full factory setup for critical or swarm-heavy repos
+./scripts/bootstrap-factory.sh . --mode factory --project-type brownfield --critical --with-swarm
+```
+
+What bootstrap creates depends on the selected profile, but typically includes:
+- `AGENTS.md`
+- `tasks/todo.md`
+- `tasks/lessons.md`
+- `software-factory.json`
+- profile-aware templates and docs
+
+### Operating modes
+- **FAST** — small, low-risk work with minimal ceremony
+- **STANDARD** — default mode for most feature/fix work
+- **FACTORY** — full setup for critical, multi-agent, or high-scope repos
+
+### Project flow
+```text
+PROJECT / DECISIONS
+        ↓
+CONTEXT / RESEARCH / CODEBASE_MAP
+        ↓
+PLAN
+        ↓
+EXECUTE
+        ↓
+SUMMARY
+        ↓
+VALIDATION / UAT
+        ↓
+VERIFY / REPAIR / SHIP
+```
+
+### Repair loop
+```text
+Requirement → Phase → Plan → Summary → Validation → Gap → Repair Plan → Re-Verification
+```
 
 ---
 
@@ -46,6 +99,96 @@ For production repos, treat PR creation as part of "done":
 
 
 ---
+
+
+## Orchestrator + Agent Swarm Pattern
+
+For one-person teams using multiple AI coding agents, adopt an **orchestrator-first** architecture:
+
+1. **Orchestrator plans** the work (problem, root cause, spec, acceptance criteria)
+2. **Delegates task packets** to specialized agents/tools
+3. **Collects evidence** (changed files, test logs, risk notes, rollback)
+4. **Integrates + verifies** before PR
+
+### Task Packet Template (copy/paste)
+```markdown
+## Outcome
+[Exact expected result]
+
+## In Scope
+- path/to/fileA
+- path/to/fileB
+
+## Out of Scope
+- path/to/fileC
+
+## Validation
+- [command 1]
+- [command 2]
+
+## Deliverables
+- changed files list
+- test/build output
+- risk notes
+- rollback command
+```
+
+### Routing Heuristics (model/agent choice)
+- **Complex architecture / high-risk**: strongest reasoning model
+- **Refactor / repetitive edits**: fast coding model
+- **Research / option discovery**: parallel cheap workers + orchestrator synthesis
+
+### Reliability Ops for External Integrations
+If your workflow depends on authenticated scraping/extraction (e.g., X article full-text):
+- define a canary check (hourly)
+- alert when extraction quality drops (e.g., text length threshold)
+- keep a documented session refresh runbook
+- persist auth/session state in env/config so restarts do not silently degrade behavior
+
+This avoids hidden drift where “pipeline is green” but business data quality is broken.
+
+---
+
+## What We Incorporated from Real-World Swarm Operations
+
+Based on production use of orchestrated Codex/Claude/Gemini-style swarms, we add these practical rules:
+
+### 1) PR is not Done
+A PR link is a milestone, not completion.
+Completion requires:
+- branch rebased/synced with default branch
+- CI green
+- blocking review comments resolved
+- UX evidence for UI changes
+
+### 2) Use a Task Registry + Deterministic Monitor
+Track worker state in a machine-readable registry (JSON/YAML).
+Run a low-cost monitor loop (cron) to check:
+- worker liveness
+- PR existence
+- check status
+- retry budget
+
+This is cheaper and more reliable than repeatedly asking an LLM for status.
+
+### 3) Reviewers Should Be Complementary
+Use different reviewer strengths (correctness, security/scalability, sanity check).
+Gate merges only on `critical` findings.
+
+### 4) Respect Hardware Limits
+Swarm throughput is often bounded by RAM/IO before model limits.
+Define per-host concurrency budgets and stagger heavy build/test jobs.
+
+### 5) Human Escalation by Exception
+Alert the human only when intervention is required (failed retries, conflicting reviews, product decision).
+Default path should be autonomous.
+
+---
+
+### Reference implementation in this repo
+- `templates/swarm.tasks.example.json`
+- `scripts/check-swarm.sh`
+- `docs/SWARM_RUNBOOK.md`
 
 ## The 5-Phase Cycle
 
@@ -118,6 +261,41 @@ See [Sub-Agent Rules](#sub-agent-rules) below — this is where most mistakes ha
 - [ ] Error cases handled gracefully
 - [ ] PR opened with validation evidence
 - [ ] PR checks/review feedback resolved before merge
+
+### Phase 4.5: PR GATE (MANDATORY) 🔐
+
+**No direct deploy after local implementation. Every change must go through PR first.**
+
+Required flow (mandatory for all repos, critical for `bybit-agents` and `content-api`):
+1. Create branch from default branch (`main` or `master`)
+2. Commit with clear scope
+3. Push branch
+4. Open PR with test evidence and rollout notes
+5. Wait for automated Guardian/Codex review comments
+6. Apply required fixes, push updates
+7. Re-run review until no blocking findings
+8. Merge only when checks/review are green
+9. Deploy from merged default branch only (never from unreviewed branch)
+
+**Automation pattern (org-wide):**
+- Reusable workflow for review (`guardian-review`)
+- Optional reusable workflow for conditional auto-approval (`guardian-approve`)
+- Branch protection requires review check + at least 1 approval
+
+**PR checklist (copy into PR body):**
+- [ ] Root cause documented
+- [ ] Fix implemented with minimal scope
+- [ ] Build/test evidence included
+- [ ] User-path verification included
+- [ ] Monitoring/Sentry impact noted
+- [ ] Rollback plan included
+
+### Pricing/Billing Guardrail (Mandatory)
+
+- Never introduce or assume new commercial plans (Stripe/pricing tiers) without explicit owner approval.
+- Technical throttling/quota changes must map to **existing** project plan definitions.
+- If legacy/deprecated plan labels exist in code, clarify in PR body that no new SKU is being created.
+- Any pricing/billing change requires dedicated PR section: current state, proposed change, Stripe impact, rollback.
 
 ### Phase 5: LEARN 🧠
 
