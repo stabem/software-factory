@@ -811,10 +811,18 @@ No evidence = QA not complete.
 
 ## Optional: SDD (lean mode)
 
-For non-trivial changes, keep only:
+For non-trivial changes (**anything beyond docs/markdown-only edits**), use only:
 - `templates/spec.md`
-- `specs/current/spec.md`
 - `scripts/check-sdd-gate.sh`
+- your task spec at `specs/current/spec.md`
+
+Create/update spec:
+
+```bash
+mkdir -p specs/current
+cp templates/spec.md specs/current/spec.md
+# then fill real content (do not keep placeholders)
+```
 
 Run before PR:
 
