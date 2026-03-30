@@ -1,8 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SPEC_PATH="${SDD_SPEC_PATH:-specs/current/spec.md}"
+SPEC_PATH="${SDD_SPEC_PATH:-}"
 TEMPLATE_PATH="templates/spec.md"
+
+if [[ -z "${SPEC_PATH}" ]]; then
+  if [[ -f "specs/current/spec.md" ]]; then
+    SPEC_PATH="specs/current/spec.md"
+  else
+    CANDIDATES=()
+    while IFS= read -r file; do
+      CANDIDATES+=("${file}")
+    done < <(find specs/current -maxdepth 1 -type f -name '*.md' ! -name 'README.md' 2>/dev/null | sort)
+
+    if [[ ${#CANDIDATES[@]} -eq 1 ]]; then
+      SPEC_PATH="${CANDIDATES[0]}"
+    elif [[ ${#CANDIDATES[@]} -gt 1 ]]; then
+      echo "[sdd-gate] [FAIL] Multiple specs found in specs/current/. Set SDD_SPEC_PATH explicitly."
+      exit 1
+    fi
+  fi
+fi
 
 # Local: include staged + unstaged + untracked.
 # CI: compare branch against base ref.
@@ -29,9 +47,9 @@ if [[ -z "${NON_DOC_CHANGES}" ]]; then
   exit 0
 fi
 
-if [[ ! -f "${SPEC_PATH}" ]]; then
-  echo "[sdd-gate] [FAIL] Missing required file: ${SPEC_PATH}"
-  echo "[sdd-gate] Hint: mkdir -p specs/current && cp templates/spec.md specs/current/spec.md"
+if [[ -z "${SPEC_PATH}" || ! -f "${SPEC_PATH}" ]]; then
+  echo "[sdd-gate] [FAIL] Missing required spec file."
+  echo "[sdd-gate] Hint: mkdir -p specs/current && cp templates/spec.md specs/current/<task>.md"
   exit 1
 fi
 

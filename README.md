@@ -814,15 +814,17 @@ No evidence = QA not complete.
 For non-trivial changes (**anything beyond docs/markdown-only edits**), use only:
 - `templates/spec.md`
 - `scripts/check-sdd-gate.sh`
-- your task spec at `specs/current/spec.md`
+- one task spec inside `specs/current/` (example: `specs/current/sdd-auth.md`)
 
 Create/update spec:
 
 ```bash
 mkdir -p specs/current
-cp templates/spec.md specs/current/spec.md
+cp templates/spec.md specs/current/<task>.md
 # then fill real content (do not keep placeholders)
 ```
+
+If `specs/current/` has multiple files, set `SDD_SPEC_PATH` when running the gate.
 
 Run before PR:
 
