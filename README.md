@@ -809,6 +809,21 @@ No evidence = QA not complete.
 
 ---
 
+## Optional: SDD (lean mode)
+
+For non-trivial changes, keep only:
+- `templates/spec.md`
+- `specs/current/spec.md`
+- `scripts/check-sdd-gate.sh`
+
+Run before PR:
+
+```bash
+bash scripts/check-sdd-gate.sh
+```
+
+---
+
 ## License
 
 MIT — use it however you want.
