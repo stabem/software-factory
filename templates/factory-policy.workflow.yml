@@ -1,0 +1,30 @@
+name: Factory Policy Gate
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  factory-policy:
+    name: Factory Policy Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract PR body
+        run: |
+          echo "PR_TITLE=${{ github.event.pull_request.title }}" >> "$GITHUB_ENV"
+          {
+            echo 'PR_BODY<<EOF'
+            printf '%s\n' "${{ github.event.pull_request.body }}"
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
+
+      - name: Run Software Factory policy checks
+        run: bash ./scripts/check-factory-gate.sh
