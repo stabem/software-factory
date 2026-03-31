@@ -255,11 +255,19 @@ After implementation/verification, PR is required before deploy:
 1. Create branch from default branch (`main` or `master`)
 2. Commit scoped changes
 3. Push and open PR
-4. Wait for Guardian/Codex automated review
-5. Address all requested changes
-6. Re-run review until no blocking findings
-7. Merge after checks pass
-8. Deploy only from merged default branch
+4. Run **Claude Code review on the real PR diff**
+5. If Claude requests changes, fix them in the same PR
+6. Re-run **Claude Code review** until no blocking findings remain
+7. Pass the repo's remaining automated/human review gates (Guardian/Codex/CI/approvals)
+8. Merge after checks pass
+9. Deploy only from merged default branch
+
+### Claude Review Loop (Required)
+- Default loop: **open PR -> Claude review -> fix -> Claude review again -> merge**
+- Claude review is a real quality gate; do not skip it on multi-step or production-impacting code changes
+- Review must happen after the PR exists so the reviewer sees the real diff and context
+- If runtime/channel lacks persistent threads, use one-shot Claude review and keep the same loop manually
+- If GitHub blocks self-approval by the PR author, record Claude's verdict in a PR comment and then satisfy the repo's remaining approval policy before merge
 
 Org standard:
 - Use reusable workflows from `stabem/.github` when available

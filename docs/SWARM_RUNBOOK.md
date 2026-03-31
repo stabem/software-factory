@@ -35,6 +35,19 @@ Pipe output to your notifier (Telegram/Slack) and only forward:
 - `CRITICAL` always
 - `WARN` when repeated >N times
 
+## 5.5) Claude Review Gate for PRs
+Before merge, add an explicit reviewer loop around the PR:
+1. open/update PR
+2. run **Claude Code review** on the real GitHub diff
+3. fix blocking findings in the same PR
+4. rerun Claude review until no blocking findings remain
+5. satisfy the remaining CI/approval policy
+6. merge
+
+Notes:
+- If your runtime cannot keep a persistent thread, use one-shot Claude review and keep the same loop manually.
+- If GitHub blocks self-approval by the PR author, record Claude's verdict in a PR comment and rely on the repo's remaining approval policy/admin gate.
+
 ## 6) Definition of Done automation
 A task transitions to `done` only when all required gates pass:
 - PR exists for the task branch (if `requirePr=true`)

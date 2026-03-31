@@ -69,16 +69,67 @@ For production repos, treat PR creation as part of "done":
    - exact files changed
    - verification commands/output
    - risk/rollback notes
-4. Let review automation/humans comment (Codex/CI/reviewer)
-5. Apply fixes in the same PR until green
-6. Merge only after checks pass
-7. Deploy and validate in production path
+4. Run **Claude Code review on the actual PR diff**
+5. Apply requested fixes in the same PR
+6. Re-run **Claude Code review** until there are no blocking findings
+7. Let remaining review automation/humans comment (Codex/CI/reviewer)
+8. Merge only after checks pass
+9. Deploy and validate in production path
 
 **Rule:** If there is no PR, the task is not complete.
 
+### Claude Review Gate (Required)
+
+Treat Claude review as an explicit gate, not an optional extra:
+- review happens **after PR creation**, against the real GitHub diff
+- default loop: **open PR -> Claude review -> fix -> Claude review again -> merge**
+- if Claude returns blocking findings, the PR is not ready to merge
+- if the runtime cannot keep a persistent thread/session, run Claude as one-shot review but preserve the same loop
+- if GitHub forbids the PR author from self-approving, post the Claude verdict in a PR comment and satisfy the repo's remaining approval policy before merge
 
 ---
 
+## Issue-Driven Orchestration (Recommended)
+
+Use GitHub Issues as the single source of truth for execution.
+
+### Why
+- Better traceability (problem -> implementation -> validation -> merge)
+- Easier async orchestration with multiple agents
+- Clear contributor onboarding (good first issue/help wanted)
+
+### Standard issue contract (required)
+Every execution issue should contain:
+1. **Outcome** (testable expected result)
+2. **In Scope** (exact files/systems allowed)
+3. **Out of Scope**
+4. **Validation** (exact commands)
+5. **Deliverables** (changed files, evidence, risks, rollback)
+
+### Agent orchestration loop per issue
+1. **Orchestrator triages** (`priority:P0/P1/P2`, `size:S/M/L`, `area:*`)
+2. **Implementer agent** executes the issue scope
+3. **Reviewer agent** audits security/quality/docs consistency
+4. **Orchestrator validates** (`typecheck`, `test`, `build`, E2E if applicable)
+5. **Commit references issue** and issue is commented with evidence
+6. **Close issue only after checks pass**
+
+### Minimal status updates (human-friendly)
+For each issue, communicate milestones:
+1. issue started
+2. implementation ready
+3. review approved
+4. checks validated
+5. commit + issue closed
+
+### Definition of Done (issue mode)
+- Behavior implemented and documented
+- Tests (incl. E2E/contract when API changed) updated
+- CI/local validation green
+- Evidence posted in the issue
+- Issue closed with commit/PR reference
+
+---
 
 ## Orchestrator + Agent Swarm Pattern
 
