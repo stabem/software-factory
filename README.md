@@ -92,6 +92,22 @@ See:
 - `docs/SENTRY_AUTOFIX_LOOP.md`
 - `templates/automation/sentry-hourly-autofix.prompt.md`
 
+### Discord runtime watchdog (Recommended)
+
+For operations that depend on a Discord bot staying healthy in both text and voice, use a watchdog that verifies the real runtime contract and self-heals drift before the operation stalls.
+
+**health check -> self-heal -> verify -> issue/PR/review/merge if recurrence demands a durable fix**
+
+Rules:
+- verify both text posting ability and actual voice-state presence
+- do not treat voice absence as cosmetic when speech is operationally required
+- use service/env/process/Discord API checks together, not just one signal
+- escalate recurring drift into repo/deploy fixes
+
+See:
+- `docs/DISCORD_RUNTIME_WATCHDOG.md`
+- `templates/automation/discord-runtime-watchdog.prompt.md`
+
 ---
 
 
