@@ -76,6 +76,21 @@ For production repos, treat PR creation as part of "done":
 
 **Rule:** If there is no PR, the task is not complete.
 
+### Sentry incident loop (Recommended)
+
+For production failures discovered in Sentry, use a disciplined remediation loop instead of ad-hoc patching:
+
+**Sentry incident -> Issue -> scoped fix -> PR -> Claude review -> merge -> verify**
+
+Rules:
+- one canonical issue per incident family / fingerprint
+- no direct hotfix merge without PR + review
+- keep secrets out of the repo; use env / ignored files / deployment secrets
+- after merge, verify the affected runtime path and confirm the incident stopped reproducing
+
+See:
+- `docs/SENTRY_AUTOFIX_LOOP.md`
+- `templates/automation/sentry-hourly-autofix.prompt.md`
 
 ---
 
