@@ -102,6 +102,27 @@ Artifacts that define or capture proof.
 - **Update trigger:** workflow lifecycle changes
 - **Anti-patterns:** states with no transition rules, transitions with no artifact requirements
 
+### `.github/ISSUE_TEMPLATE/implementation_task.yml`
+- **Purpose:** SDD-grade specification for every implementation task — requirements, design, security assessment, validation plan, rollback strategy
+- **Producer:** orchestrator / developer opening the task
+- **Consumers:** implementer, planner, reviewer, QA
+- **Update trigger:** methodology changes to what constitutes a complete specification
+- **Anti-patterns:** placeholder text without real data, skipped security assessment, vague acceptance criteria, closing without deploy validation
+
+### `.github/ISSUE_TEMPLATE/bug_report.yml`
+- **Purpose:** evidence-first bug report following INVESTIGATE methodology — observed vs expected behavior, reproduction steps, root cause analysis
+- **Producer:** anyone reporting a defect (developer, QA, user)
+- **Consumers:** investigator, implementer, reviewer
+- **Update trigger:** changes to investigation requirements
+- **Anti-patterns:** no reproduction steps, missing evidence data, assumptions instead of DB queries/logs
+
+### `.github/PULL_REQUEST_TEMPLATE.md`
+- **Purpose:** 12-section delivery checklist ensuring scope compliance, security review, validation evidence, performance check, and post-merge validation before code enters the default branch
+- **Producer:** implementer opening the PR
+- **Consumers:** reviewer, QA guardian, CI policy gate
+- **Update trigger:** changes to security review requirements, governance policy changes
+- **Anti-patterns:** rubber-stamped checkboxes, placeholder text instead of real evidence, missing issue link, security section skipped
+
 ## Lifecycle Rules
 - Strategic documents change less often than operational ones.
 - Plans must be updated before implementation, not retroactively after code is written.

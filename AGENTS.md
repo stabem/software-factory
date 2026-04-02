@@ -116,6 +116,47 @@ No Codex implementation starts without this handoff.
 
 ---
 
+## Issue-First Development (Non-Negotiable)
+
+**Every implementation task starts with a GitHub Issue. No code without an issue. No PR without an issue.**
+
+This rule exists because:
+- Issues create a **searchable backlog** — every decision, requirement, and security assessment is preserved
+- PRs link back to issues — creating a **complete audit trail** from requirement to deployment
+- Standardized templates enforce **consistent quality** across the entire squad
+- Future developers can understand **why** something was built, not just what
+
+### Workflow
+
+```
+Issue Created → Plan Approved → Branch Created → Code Implemented → PR Opened → Review → Merge → Deploy Validation → Issue Closed
+    │                                                    │
+    └── uses: .github/ISSUE_TEMPLATE/                    └── uses: .github/PULL_REQUEST_TEMPLATE.md
+```
+
+### Rules
+1. **Issue first** — Create a GitHub Issue using the appropriate template BEFORE writing code
+2. **SDD-grade detail** — The issue IS the specification. Fill every section with evidence and data
+3. **Security assessment mandatory** — Every issue includes a security assessment, no exceptions
+4. **Branch naming** — Branch references the issue: `feat/#42-cache-invalidation`, `fix/#55-auth-timeout`
+5. **PR links issue** — Every PR body starts with `Closes #<issue-number>`
+6. **PR template enforced** — All PR sections must be completed with actual evidence (not placeholder text)
+7. **Issue closed only after deploy** — Issue is closed AFTER merge + deploy validation, not on PR open
+
+### Templates Available
+- **Implementation Task:** `.github/ISSUE_TEMPLATE/implementation_task.yml` — SDD-style specification with 10 sections covering requirements, design, security, validation, and rollback
+- **Bug Report:** `.github/ISSUE_TEMPLATE/bug_report.yml` — Evidence-first bug report following INVESTIGATE methodology
+- **Pull Request:** `.github/PULL_REQUEST_TEMPLATE.md` — 12-section checklist covering scope compliance, security review, performance, observability, and post-merge validation
+
+### Why This Matters
+A squad of developers (human or AI) working on the same project needs:
+- **Shared history** — Issues are the single source of truth for "what was decided and why"
+- **Standard methodology** — Templates enforce the same quality bar for every contributor
+- **Knowledge preservation** — Six months from now, anyone can read issue #42 and understand the full context
+- **Accountability** — Security checklist in the PR prevents rubber-stamping
+
+---
+
 ## Phase 3: EXECUTE ⚡
 
 **Build the thing. Use sub-agents for parallelism.**
@@ -252,20 +293,26 @@ Rule: classify comments as `critical` vs `nice-to-have`; block only on critical.
 
 After implementation/verification, PR is required before deploy:
 
-1. Create branch from default branch (`main` or `master`)
-2. Commit scoped changes
-3. Push and open PR
-4. Wait for Guardian/Codex automated review
-5. Address all requested changes
-6. Re-run review until no blocking findings
-7. Merge after checks pass
-8. Deploy only from merged default branch
+1. Verify a GitHub Issue exists for this work (issue-first rule)
+2. Create branch from default branch referencing the issue (`feat/#42-description`)
+3. Commit scoped changes
+4. Push and open PR using `.github/PULL_REQUEST_TEMPLATE.md`
+5. Ensure PR body links to the issue (`Closes #42`)
+6. Complete ALL PR template sections (security review, validation evidence, rollback plan)
+7. Wait for Guardian/Codex automated review
+8. Address all requested changes
+9. Re-run review until no blocking findings
+10. Merge after checks pass
+11. Record deploy validation evidence
+12. Close the linked issue with deploy evidence
+13. Deploy only from merged default branch
 
 Org standard:
 - Use reusable workflows from `stabem/.github` when available
 - Require status check `review`
 - Require at least one approval
 - Prefer adding a policy gate check using `scripts/check-factory-gate.sh` to enforce PR body contract
+- PR body must pass the security review checklist (not rubber-stamped)
 
 For `bybit-agents` and `content-api`, this step is non-negotiable.
 
@@ -331,6 +378,9 @@ No evidence = QA not done.
 - `templates/qa-guardian.workflow.yml`
 - `templates/factory-policy.workflow.yml`
 - `scripts/check-factory-gate.sh`
+- `.github/ISSUE_TEMPLATE/implementation_task.yml` → copy to project `.github/ISSUE_TEMPLATE/`
+- `.github/ISSUE_TEMPLATE/bug_report.yml` → copy to project `.github/ISSUE_TEMPLATE/`
+- `.github/PULL_REQUEST_TEMPLATE.md` → copy to project `.github/`
 
 **Workflow:**
 1. Write plan to `tasks/todo.md` with checkable items
@@ -369,6 +419,9 @@ No evidence = QA not done.
 | Delegated work marked done without proof | Require changed files + test logs + rollback note. |
 
 | PR opened ≠ task complete | Enforce DoD with CI + review + sync checks before merge. |
+| Code without an issue | Every task starts with a GitHub Issue. No issue = no branch = no PR. |
+| PR security checklist rubber-stamped | Reviewer must verify security items match actual changes, not just tick boxes. |
+| Issue closed on PR open | Issue closes AFTER merge + deploy validation, not when PR is opened. |
 | Monitoring loop burns tokens | Prefer deterministic scripts + registry checks over LLM polling. |
 | Swap/memory pressure from too many workers | Set host-level concurrency limits and stagger heavy build/test phases. |
 ---
@@ -379,4 +432,7 @@ No evidence = QA not done.
 - [Verification Model](docs/VERIFICATION_MODEL.md)
 - [State Machine](docs/STATE_MACHINE.md)
 - [Swarm Runbook](docs/SWARM_RUNBOOK.md)
+- [Issue Template — Implementation Task](.github/ISSUE_TEMPLATE/implementation_task.yml)
+- [Issue Template — Bug Report](.github/ISSUE_TEMPLATE/bug_report.yml)
+- [PR Template](.github/PULL_REQUEST_TEMPLATE.md)
 

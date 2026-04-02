@@ -1,0 +1,206 @@
+name: "Bug Report"
+description: "Report a defect with evidence. Follows INVESTIGATE-first methodology."
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+body:
+  # ──────────────────────────────────────────────
+  # SECTION 1: CLASSIFICATION
+  # ──────────────────────────────────────────────
+  - type: markdown
+    attributes:
+      value: |
+        ## 1. Classification
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - P0 — Total outage / data loss / security breach
+        - P1 — Critical degradation, immediate attention required
+        - P2 — Partial degradation, fix in planned sprint
+        - P3 — Minor issue, backlog
+    validations:
+      required: true
+
+  - type: dropdown
+    id: change-class
+    attributes:
+      label: Fix Classification
+      description: "How should the fix be governed?"
+      options:
+        - hotfix — Fastest safe path + mandatory post-incident review
+        - feature — Standard fix with full verification cycle
+        - risky-infra — Fix touches infrastructure, requires staged rollout
+    validations:
+      required: true
+
+  # ──────────────────────────────────────────────
+  # SECTION 2: EVIDENCE (INVESTIGATE FIRST)
+  # ──────────────────────────────────────────────
+  - type: markdown
+    attributes:
+      value: |
+        ## 2. Evidence
+        Software Factory requires **data-first investigation**. Provide evidence, not assumptions.
+
+  - type: textarea
+    id: observed-behavior
+    attributes:
+      label: Observed Behavior
+      description: "What actually happens? Include exact error messages, HTTP status codes, stack traces, or screenshots."
+      placeholder: |
+        POST /auth/verify returns 403 Forbidden
+        Response body: {"error": "user_not_verified"}
+        This happens even after clicking the verification link successfully.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: "What should happen instead?"
+      placeholder: |
+        POST /auth/verify should return 200 OK after the user clicks
+        the verification link, and all subsequent API calls should succeed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Reproduction Steps
+      description: "Exact steps to reproduce. Must be repeatable."
+      placeholder: |
+        1. Register new user via POST /auth/register
+        2. Receive verification email
+        3. Click verification link → 200 OK
+        4. Immediately call GET /api/dashboard → 403 Forbidden
+        5. Wait 5 minutes → GET /api/dashboard → 200 OK
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence-data
+    attributes:
+      label: Investigation Evidence
+      description: "DB queries, log excerpts, metrics, error rates. The more data, the faster the fix."
+      placeholder: |
+        ```sql
+        -- Users stuck in unverified state despite clicking link
+        SELECT count(*) FROM users
+        WHERE email_verified = true AND cache_state = 'unverified';
+        -- Result: 1,247 users
+        ```
+
+        Log excerpt (auth-service, 2026-03-28 14:32 UTC):
+        ```
+        WARN  auth.middleware: cache hit for user_id=abc123, verified=false
+        DEBUG auth.cache: TTL remaining: 287s, key: auth:user:abc123
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: root-cause-hypothesis
+    attributes:
+      label: Root Cause Hypothesis
+      description: "If you have a hypothesis, state it with supporting evidence. Mark as CONFIRMED or SUSPECTED."
+      placeholder: |
+        CONFIRMED: Redis auth cache (TTL 5min) is not invalidated after
+        email verification write to DB. The middleware reads from cache
+        first and returns stale `verified=false` state.
+
+        Evidence: cache key `auth:user:abc123` shows `verified:false`
+        while DB shows `email_verified:true` for the same user.
+    validations:
+      required: false
+
+  # ──────────────────────────────────────────────
+  # SECTION 3: IMPACT
+  # ──────────────────────────────────────────────
+  - type: markdown
+    attributes:
+      value: |
+        ## 3. Impact Assessment
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: "Users affected, revenue impact, frequency, affected environments."
+      placeholder: |
+        - Affected users: ~49% of new registrations (1,247 in last 7 days)
+        - Frequency: Every new user registration
+        - Environments: Production only (dev uses direct DB reads)
+        - Revenue: Blocked users cannot access paid features
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current Workaround
+      description: "Is there a temporary workaround? If so, describe it."
+      placeholder: |
+        Users can wait 5 minutes for cache expiry, then retry.
+        Support team manually invalidates cache via Redis CLI for escalated tickets.
+    validations:
+      required: false
+
+  # ──────────────────────────────────────────────
+  # SECTION 4: SECURITY IMPLICATIONS
+  # ──────────────────────────────────────────────
+  - type: dropdown
+    id: security-impact
+    attributes:
+      label: Security Impact
+      description: "Does this bug have security implications?"
+      options:
+        - None — No security implications
+        - Low — Minor security concern, no data exposure
+        - Medium — Potential data exposure or auth weakness
+        - High — Active security vulnerability, data breach risk
+        - Critical — Actively exploitable, immediate action required
+    validations:
+      required: true
+
+  - type: textarea
+    id: security-notes
+    attributes:
+      label: Security Notes
+      description: "For Medium/High/Critical: describe the security implications and any immediate mitigations needed."
+    validations:
+      required: false
+
+  # ──────────────────────────────────────────────
+  # SECTION 5: ENVIRONMENT
+  # ──────────────────────────────────────────────
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: "Where was this observed?"
+      placeholder: |
+        - Environment: Production / Staging / Development
+        - Service version: v2.3.1 (commit abc123)
+        - Browser/client: Chrome 120 / API client v1.2
+        - OS: Ubuntu 22.04 / macOS 14.3
+    validations:
+      required: true
+
+  # ──────────────────────────────────────────────
+  # SECTION 6: REFERENCES
+  # ──────────────────────────────────────────────
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: "Related issues, PRs, logs, dashboards, Slack threads."
+      placeholder: |
+        - Related: #42 (Redis client upgrade)
+        - Dashboard: grafana.internal/d/auth-errors
+        - Incident: INC-2026-0328
+    validations:
+      required: false

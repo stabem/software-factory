@@ -66,6 +66,10 @@ if [[ "$MODE" != "fast" ]]; then
   copy_file "$ROOT_DIR/templates/qa-guardian.workflow.yml" "$TARGET_DIR/.github/workflows/qa-guardian.yml"
   copy_file "$ROOT_DIR/templates/factory-policy.workflow.yml" "$TARGET_DIR/.github/workflows/factory-policy.yml"
   copy_file "$ROOT_DIR/scripts/check-factory-gate.sh" "$TARGET_DIR/scripts/check-factory-gate.sh"
+  copy_file "$ROOT_DIR/.github/ISSUE_TEMPLATE/implementation_task.yml" "$TARGET_DIR/.github/ISSUE_TEMPLATE/implementation_task.yml"
+  copy_file "$ROOT_DIR/.github/ISSUE_TEMPLATE/bug_report.yml" "$TARGET_DIR/.github/ISSUE_TEMPLATE/bug_report.yml"
+  copy_file "$ROOT_DIR/.github/ISSUE_TEMPLATE/config.yml" "$TARGET_DIR/.github/ISSUE_TEMPLATE/config.yml"
+  copy_file "$ROOT_DIR/.github/PULL_REQUEST_TEMPLATE.md" "$TARGET_DIR/.github/PULL_REQUEST_TEMPLATE.md"
 fi
 
 if [[ "$MODE" == "factory" ]]; then

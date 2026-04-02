@@ -49,6 +49,10 @@ if ($Mode -ne 'fast') {
   Copy-TemplateFile -Source (Join-Path $root "templates\qa-guardian.workflow.yml") -Destination (Join-Path $target ".github\workflows\qa-guardian.yml") -ForceCopy:$Force
   Copy-TemplateFile -Source (Join-Path $root "templates\factory-policy.workflow.yml") -Destination (Join-Path $target ".github\workflows\factory-policy.yml") -ForceCopy:$Force
   Copy-TemplateFile -Source (Join-Path $root "scripts\check-factory-gate.sh") -Destination (Join-Path $target "scripts\check-factory-gate.sh") -ForceCopy:$Force
+  Copy-TemplateFile -Source (Join-Path $root ".github\ISSUE_TEMPLATE\implementation_task.yml") -Destination (Join-Path $target ".github\ISSUE_TEMPLATE\implementation_task.yml") -ForceCopy:$Force
+  Copy-TemplateFile -Source (Join-Path $root ".github\ISSUE_TEMPLATE\bug_report.yml") -Destination (Join-Path $target ".github\ISSUE_TEMPLATE\bug_report.yml") -ForceCopy:$Force
+  Copy-TemplateFile -Source (Join-Path $root ".github\ISSUE_TEMPLATE\config.yml") -Destination (Join-Path $target ".github\ISSUE_TEMPLATE\config.yml") -ForceCopy:$Force
+  Copy-TemplateFile -Source (Join-Path $root ".github\PULL_REQUEST_TEMPLATE.md") -Destination (Join-Path $target ".github\PULL_REQUEST_TEMPLATE.md") -ForceCopy:$Force
 }
 
 if ($Mode -eq 'factory') {
