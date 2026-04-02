@@ -67,14 +67,14 @@ Required issue structure:
 - rollback note
 ```
 
-## 3) Implement on a scoped branch
+### 3) Implement on a scoped branch
 Rules:
 - branch name pattern: `fix/sentry-<short-slug>`
 - keep the fix tightly scoped to the incident
 - avoid mixing unrelated cleanup into the same PR
 - prefer the smallest root-cause fix that cleanly removes the incident
 
-## 4) Validate locally
+### 4) Validate locally
 Run the narrowest commands that prove the fix.
 
 Examples:
@@ -85,7 +85,7 @@ Examples:
 
 If deterministic validation is impossible, explicitly document the gap.
 
-## 5) Open a PR
+### 5) Open a PR
 Use a PR body that passes the factory gate.
 
 Minimum required sections:
@@ -95,7 +95,7 @@ Minimum required sections:
 - `## Validation`
 - `## Rollback`
 
-## 6) Run Claude review on the real PR diff
+### 6) Run Claude review on the real PR diff
 Claude review is a quality gate.
 
 Required loop:
@@ -105,12 +105,18 @@ Required loop:
 4. rerun Claude review
 5. merge only when blockers are gone
 
-## 7) Merge and verify
+### 7) Merge and verify
 After merge:
 - monitor deploy/check pipeline
 - verify the affected runtime path or endpoint
 - check whether the Sentry symptom stops reproducing
 - update the issue/PR with evidence and residual risk
+
+### 8) Learn
+If the incident exposed a process or design gap:
+- add a lesson to `tasks/lessons.md`
+- record the concrete prevention rule, not just the symptom
+- update templates or runbooks when the lesson should apply across repos
 
 ## Operational rules
 

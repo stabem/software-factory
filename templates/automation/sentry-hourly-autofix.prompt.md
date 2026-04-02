@@ -9,6 +9,11 @@ It contains no credentials and assumes secrets come from env / ignored files / d
 - `RUNTIME_LABEL`: short human label for updates
 - `DEFAULT_VALIDATION_COMMANDS`: repo-specific validation commands
 
+Expected secret names are repo/operator-defined, but common examples are:
+- `SENTRY_AUTH_TOKEN`
+- `SENTRY_ORG`
+- `SENTRY_PROJECT`
+
 ---
 
 Work in repo: `REPO_DIR`
@@ -96,7 +101,7 @@ DEFAULT_VALIDATION_COMMANDS
 ### 5) Open PR
 PR body must contain:
 - `## Summary`
-- `Change class: hotfix`
+- `Change class: hotfix|feature|refactor|risky-infra`
 - `## Root cause`
 - `## Validation`
 - `## Rollback`
