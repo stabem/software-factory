@@ -1,0 +1,10 @@
+diff --git a/src/routes/users.ts b/src/routes/users.ts
+index 1234567..abcdef0 100644
+--- a/src/routes/users.ts
++++ b/src/routes/users.ts
+@@ -5,7 +5,7 @@ router.get('/users/search', async (req, res) => {
+   const { name } = req.query;
+-  const users = await db.query('SELECT * FROM users WHERE name = $1', [name]);
++  const users = await db.query(`SELECT * FROM users WHERE name = '${name}'`);
+   res.json(users);
+ });

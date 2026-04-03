@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Heuristics Pack",
+  "description": "Cross-project knowledge pack. Importable set of lessons, planning rules, review checks, and metrics by domain.",
+  "type": "object",
+  "required": ["name", "version", "domain", "lessons", "planning_rules", "review_checks"],
+  "properties": {
+    "name": { "type": "string", "pattern": "^pack-[a-z0-9-]+$" },
+    "version": { "type": "string", "pattern": "^v[0-9]+\\.[0-9]+$" },
+    "domain": { "type": "string", "description": "e.g., fintech-backend, saas-api, mobile-offline, cli-tool, infra-iac" },
+    "description": { "type": "string" },
+    "lessons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["pattern", "preventive_rule"],
+        "properties": {
+          "pattern": { "type": "string" },
+          "preventive_rule": { "type": "string" },
+          "confidence": { "enum": ["high", "medium", "low"] }
+        }
+      }
+    },
+    "planning_rules": {
+      "type": "array",
+      "description": "Rules the planner must follow when this pack is active",
+      "items": {
+        "type": "object",
+        "required": ["trigger", "rule"],
+        "properties": {
+          "trigger": { "type": "string", "description": "When this rule applies (e.g., 'new public endpoint', 'payment flow')" },
+          "rule": { "type": "string", "description": "What the planner must add to acceptance criteria or security checks" }
+        }
+      }
+    },
+    "review_checks": {
+      "type": "array",
+      "description": "Additional review checks specific to this domain",
+      "items": {
+        "type": "object",
+        "required": ["category", "check"],
+        "properties": {
+          "category": { "type": "string" },
+          "check": { "type": "string" },
+          "severity_if_failed": { "enum": ["critical", "important", "advisory"] }
+        }
+      }
+    },
+    "metric_overrides": {
+      "type": "array",
+      "description": "Domain-specific performance/quality targets",
+      "items": {
+        "type": "object",
+        "required": ["metric", "target"],
+        "properties": {
+          "metric": { "type": "string" },
+          "target": { "type": "string" }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,208 @@
+name: Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  # ── Job 1: Policy Gate (fast, deterministic) ──
+  policy-gate:
+    name: Policy Gate
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate PR structure
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          fail=0
+
+          check_section() {
+            local section="$1"
+            local label="$2"
+            if echo "$PR_BODY" | grep -qi "$section"; then
+              echo "  [PASS] $label"
+            else
+              echo "  [FAIL] $label"
+              fail=1
+            fi
+          }
+
+          echo "=== Policy Gate ==="
+          check_section "## Summary\|## 1\. Summary" "Summary section"
+          check_section "Closes #\|Fixes #\|Resolves #" "Issue reference"
+          check_section "## Validation\|## Validation Evidence\|## 5\. Validation" "Validation evidence"
+          check_section "## Security\|## Security Review\|## 6\. Security" "Security review"
+          check_section "## Rollback\|## 9\. Rollback" "Rollback plan"
+
+          if [ "$fail" -ne 0 ]; then
+            echo ""
+            echo "PR body is missing required sections."
+            echo "See PULL_REQUEST_TEMPLATE.md for the expected format."
+            exit 1
+          fi
+
+          echo ""
+          echo "All policy checks passed."
+
+  # ── Job 2: Deterministic Preflight Checks (hybrid review layer 1) ──
+  preflight-checks:
+    name: Preflight Security Checks
+    runs-on: ubuntu-latest
+    needs: policy-gate
+    outputs:
+      machine_findings: ${{ steps.collect.outputs.findings }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Secret detection
+        id: secrets
+        run: |
+          echo "=== Secret Detection ==="
+          DIFF=$(git diff ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }})
+          FINDINGS=""
+
+          # AWS keys
+          if echo "$DIFF" | grep -Pn 'AKIA[0-9A-Z]{16}' 2>/dev/null; then
+            FINDINGS="${FINDINGS}CRITICAL: Possible AWS access key detected\n"
+          fi
+
+          # Private keys
+          if echo "$DIFF" | grep -Pn '-----BEGIN (RSA |EC |DSA )?PRIVATE KEY-----' 2>/dev/null; then
+            FINDINGS="${FINDINGS}CRITICAL: Private key detected in diff\n"
+          fi
+
+          # Hardcoded secrets
+          if echo "$DIFF" | grep -Pn '(?i)(password|secret|token|apikey|api_key)\s*[:=]\s*["\x27][A-Za-z0-9+/=_-]{16,}' 2>/dev/null; then
+            FINDINGS="${FINDINGS}CRITICAL: Possible hardcoded secret detected\n"
+          fi
+
+          # TLS verification disabled
+          if echo "$DIFF" | grep -Pn 'rejectUnauthorized\s*:\s*false|verify\s*=\s*False|InsecureSkipVerify\s*:\s*true' 2>/dev/null; then
+            FINDINGS="${FINDINGS}IMPORTANT: TLS verification disabled\n"
+          fi
+
+          # Dangerous patterns
+          if echo "$DIFF" | grep -Pn 'eval\s*\(|dangerouslySetInnerHTML|unsafe-inline|unsafe-eval' 2>/dev/null; then
+            FINDINGS="${FINDINGS}IMPORTANT: Dangerous code pattern detected (eval/innerHTML/CSP weakening)\n"
+          fi
+
+          echo "secret_findings<<EOF" >> "$GITHUB_OUTPUT"
+          echo -e "$FINDINGS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+          if echo "$FINDINGS" | grep -q "CRITICAL"; then
+            echo "has_critical=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_critical=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Scope compliance check
+        id: scope
+        run: |
+          echo "=== Scope Compliance ==="
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }})
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          echo "scope_changed_files<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$CHANGED_FILES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Dependency audit
+        id: deps
+        run: |
+          echo "=== Dependency Audit ==="
+          FINDINGS=""
+
+          if [ -f package-lock.json ] || [ -f yarn.lock ]; then
+            if [ -f package-lock.json ]; then
+              AUDIT=$(npm audit --production --audit-level=high 2>&1 || true)
+            else
+              AUDIT=$(yarn audit --level high 2>&1 || true)
+            fi
+            if echo "$AUDIT" | grep -qi "high\|critical"; then
+              FINDINGS="${FINDINGS}IMPORTANT: npm/yarn audit found high/critical vulnerabilities\n"
+            fi
+          fi
+
+          if [ -f requirements.txt ]; then
+            pip install pip-audit 2>/dev/null && {
+              AUDIT=$(pip-audit -r requirements.txt 2>&1 || true)
+              if echo "$AUDIT" | grep -qi "high\|critical"; then
+                FINDINGS="${FINDINGS}IMPORTANT: pip-audit found high/critical vulnerabilities\n"
+              fi
+            }
+          fi
+
+          echo "dep_findings<<EOF" >> "$GITHUB_OUTPUT"
+          echo -e "$FINDINGS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Collect all preflight findings
+        id: collect
+        run: |
+          MACHINE_FINDINGS=""
+          MACHINE_FINDINGS="${MACHINE_FINDINGS}${{ steps.secrets.outputs.secret_findings }}"
+          MACHINE_FINDINGS="${MACHINE_FINDINGS}${{ steps.deps.outputs.dep_findings }}"
+          MACHINE_FINDINGS="${MACHINE_FINDINGS}Changed files: ${{ steps.scope.outputs.scope_changed_files }}"
+
+          echo "findings<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$MACHINE_FINDINGS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Block on critical secrets
+        if: steps.secrets.outputs.has_critical == 'true'
+        run: |
+          echo "BLOCKED: Critical secret detected in diff. PR cannot proceed."
+          echo "Remove the secret, rotate the credential, and force-push."
+          exit 1
+
+  # ── Job 3: LLM-Powered Review (hybrid review layer 2) ──
+  claude-review:
+    name: Security & Quality Review
+    runs-on: ubuntu-latest
+    needs: preflight-checks
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Setup review contract
+        run: |
+          if [ -f templates/CLAUDE_REVIEW.md ]; then
+            cp templates/CLAUDE_REVIEW.md CLAUDE.md
+          fi
+
+      - name: Claude Code Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          use_sticky_comment: true
+          track_progress: true
+          model: claude-sonnet-4-6
+          max_turns: 25
+          prompt: |
+            Read and follow the CLAUDE.md review contract.
+
+            ## Pre-Review Machine Findings (from deterministic preflight checks)
+            ${{ needs.preflight-checks.outputs.machine_findings }}
+
+            ## Instructions
+            1. Acknowledge each machine finding above
+            2. Review this PR for: security (OWASP), correctness, performance, test coverage, scope compliance
+            3. For each finding, include root_cause and preventive_rule (feeds learning loop)
+            4. Classify all findings as CRITICAL, IMPORTANT, or ADVISORY
+            5. Produce structured output following CLAUDE.md format
+            6. Output must also be valid JSON matching schemas/review-output.schema.json

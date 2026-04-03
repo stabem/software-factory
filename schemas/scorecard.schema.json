@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Spec-to-Ship Scorecard",
+  "description": "Quantitative scorecard for a workflow run. Enables comparison across features, projects, and pipeline versions.",
+  "type": "object",
+  "required": ["schema_version", "session_id", "feature_title", "completed_at", "timing", "tasks", "quality", "score"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "session_id": { "type": "string" },
+    "feature_title": { "type": "string" },
+    "change_class": { "enum": ["hotfix", "feature", "refactor", "risky-infra"] },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "timing": {
+      "type": "object",
+      "required": ["total_duration_ms"],
+      "properties": {
+        "total_duration_ms": { "type": "integer" },
+        "planning_ms": { "type": "integer" },
+        "implementation_ms": { "type": "integer" },
+        "review_ms": { "type": "integer" },
+        "merge_ms": { "type": "integer" }
+      }
+    },
+    "tasks": {
+      "type": "object",
+      "required": ["total", "completed", "failed"],
+      "properties": {
+        "total": { "type": "integer" },
+        "completed": { "type": "integer" },
+        "failed": { "type": "integer" },
+        "blocked": { "type": "integer" }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "properties": {
+        "review_cycles_total": { "type": "integer", "description": "Sum of review iterations across all PRs" },
+        "review_cycles_avg": { "type": "number" },
+        "retries_total": { "type": "integer" },
+        "auto_repairs": { "type": "integer" },
+        "security_findings": {
+          "type": "object",
+          "properties": {
+            "critical": { "type": "integer" },
+            "important": { "type": "integer" },
+            "advisory": { "type": "integer" }
+          }
+        },
+        "scope_violations": { "type": "integer" },
+        "scope_churn_ratio": { "type": "number", "description": "Files changed outside original scope / total files changed" },
+        "escaped_defects": { "type": "integer", "description": "Defects found post-merge (updated retroactively)" },
+        "post_merge_regressions": { "type": "integer", "description": "Regressions detected after merge (updated retroactively)" }
+      }
+    },
+    "tokens": {
+      "type": "object",
+      "description": "Optional — tracked when provider exposes data",
+      "properties": {
+        "total": { "type": "integer" },
+        "planning": { "type": "integer" },
+        "implementation": { "type": "integer" },
+        "review": { "type": "integer" }
+      }
+    },
+    "lessons_generated": { "type": "integer", "description": "Number of new lessons extracted from this run" },
+    "score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Composite score. See docs/METRICS.md for formula."
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,17 @@
+diff --git a/src/utils/validate.ts b/src/utils/validate.ts
+index 1234567..abcdef0 100644
+--- a/src/utils/validate.ts
++++ b/src/utils/validate.ts
+@@ -1,4 +1,12 @@
+ export function isValidEmail(email: string): boolean {
+   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+   return re.test(email);
+ }
++
++export function isValidPassword(password: string): boolean {
++  if (password.length < 8) return false;
++  if (!/[A-Z]/.test(password)) return false;
++  if (!/[a-z]/.test(password)) return false;
++  if (!/[0-9]/.test(password)) return false;
++  return true;
++}

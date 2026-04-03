@@ -1,0 +1,9 @@
+# Worktrees are local only
+worktrees/
+
+# Claude Code local state
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db

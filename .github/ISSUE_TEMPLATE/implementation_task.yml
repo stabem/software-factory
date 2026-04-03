@@ -1,0 +1,497 @@
+name: "Implementation Task"
+description: "Structured task specification following LLM-Guided Software Architecture methodology. Use for features, refactors, and infrastructure changes."
+title: "[TASK] "
+labels: ["task", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > **Schema alignment:** This template maps to `schemas/strategic-plan.schema.json` (task-level fields).
+        > When OpenClaw creates issues programmatically, it uses `templates/ISSUE_BODY.md` which is derived from the same schema.
+        > This template is the human-facing equivalent for manual issue creation.
+
+  # ──────────────────────────────────────────────
+  # SECTION 1: IDENTIFICATION & CLASSIFICATION
+  # ──────────────────────────────────────────────
+  - type: markdown
+    attributes:
+      value: |
+        ## 1. Identification & Classification
+        Classify the change so the team applies proportional process.
+
+  - type: dropdown
+    id: change-class
+    attributes:
+      label: Change Class
+      description: "Determines the governance level applied to this task."
+      options:
+        - feature — Full PLAN → IMPLEMENT → REVIEW → MERGE pipeline
+        - refactor — PLAN → IMPLEMENT with no-regression evidence
+        - risky-infra — PLAN → staged IMPLEMENT → thorough REVIEW + rollback drill
+        - hotfix — Fastest safe path + mandatory post-incident review
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: "Based on incident severity matrix when applicable."
+      options:
+        - P0 — Critical (total outage / data loss / security breach)
+        - P1 — High (critical degradation, needs immediate owner + ETA)
+        - P2 — Medium (partial degradation, planned sprint)
+        - P3 — Low (minor issue, backlog)
+    validations:
+      required: true
+
+  - type: input
+    id: target-version
+    attributes:
+      label: Target Version / Sprint
+      description: "Release version or sprint this task is targeting."
+      placeholder: "e.g., v2.4.0 / Sprint 23"
+    validations:
+      required: false
+
+  # ──────────────────────────────────────────────
+  # SECTION 2: CONTEXT & MOTIVATION (THE "WHY")
+  # ──────────────────────────────────────────────
+  - type: markdown
+    attributes:
+      value: |
+        ## 2. Context & Motivation
+        Explain **why** this work exists. A future reader should understand the business or technical driver without needing to ask anyone.
+
+  - type: textarea
+    id: problem-statement
+    attributes:
+      label: Problem Statement
+      description: "What is broken, missing, or suboptimal? Include data: error rates, user reports, DB queries, log excerpts, metrics dashboards."
+      placeholder: |
+        Example:
+        - 23% of new users never complete onboarding because the email verification
+          endpoint returns 403 when the Redis cache still holds stale auth state
+          (verified via `SELECT count(*) FROM users WHERE verified_at IS NULL
+          AND created_at > now() - interval '7 days'`).
+    validations:
+      required: true
+
+  - type: textarea
+    id: root-cause
+    attributes:
+      label: Root Cause Analysis
+      description: "Why does this problem exist? Cite evidence (code paths, logs, DB state). Distinguish root cause from symptoms."
+      placeholder: |
+        Root cause: After email verification, the auth middleware reads from
+        Redis cache (TTL 5min) instead of DB, so the user remains blocked
+        until cache expires.
+
+        NOT a root cause: "The UX is confusing" (that's a symptom).
+    validations:
+      required: true
+
+  - type: textarea
+    id: business-justification
+    attributes:
+      label: Business Justification
+      description: "What is the impact of NOT doing this? Revenue, users affected, compliance risk, tech debt cost, team velocity."
+      placeholder: |
+        - 49% of registered users never activate → direct revenue loss
+        - Support tickets: ~30/week related to "stuck on verification"
+        - Compliance: SOC 2 audit finding #12 requires fix by Q2
+    validations:
+      required: true
+
+  # ──────────────────────────────────────────────
+  # SECTION 3: REQUIREMENTS & ACCEPTANCE CRITERIA
+  # ──────────────────────────────────────────────
+  - type: markdown
+    attributes:
+      value: |
+        ## 3. Requirements & Acceptance Criteria
+        Define **what** must be true when this task is done. Each criterion must be independently testable.
+
+  - type: textarea
+    id: functional-requirements
+    attributes:
+      label: Functional Requirements
+      description: "Exact behavioral contracts. Use testable language: 'WHEN X, THEN Y'."
+      placeholder: |
+        - FR-1: WHEN a user clicks the verification link, THEN auth cache is
+          invalidated immediately and subsequent API calls return 200.
+        - FR-2: WHEN verification link expires (>24h), THEN user sees a
+          "resend verification" prompt with clear messaging.
+      value: |
+        - FR-1:
+        - FR-2:
+    validations:
+      required: true
+
+  - type: textarea
+    id: non-functional-requirements
+    attributes:
+      label: Non-Functional Requirements (NFRs)
+      description: "Performance, reliability, security, observability, cost targets."
+      placeholder: |
+        - NFR-1 (Latency): Verification endpoint responds < 200ms p99
+        - NFR-2 (Security): Verification tokens are single-use and expire after 24h
+        - NFR-3 (Observability): Emit metric `auth.verification.completed` with user_id tag
+      value: |
+        - NFR-1 (Performance):
+        - NFR-2 (Security):
+        - NFR-3 (Observability):
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria (Definition of Done)
+      description: "Concrete, verifiable conditions. Each line should be checkable in a review."
+      value: |
+        - [ ] All functional requirements implemented and tested
+        - [ ] All NFRs verified with evidence
+        - [ ] Build passes (zero warnings in scoped modules)
+        - [ ] Unit tests cover happy path, error path, and edge cases
+        - [ ] Integration/E2E tests pass on production-like environment
+        - [ ] No regressions in existing test suite
+        - [ ] Security review completed (see Section 6)
+        - [ ] PR opened with full template completed
+        - [ ] Code reviewed and approved
+        - [ ] Merged to default branch
+        - [ ] Deploy validation recorded (when applicable)
+    validations:
+      required: true
+
+  # ──────────────────────────────────────────────
+  # SECTION 4: TECHNICAL DESIGN
+  # ──────────────────────────────────────────────
+  - type: markdown
+    attributes:
+      value: |
+        ## 4. Technical Design
+        Describe **how** the solution will be implemented. This section is the SDD core — it becomes the implementation contract.
+
+  - type: textarea
+    id: solution-overview
+    attributes:
+      label: Solution Overview
+      description: "High-level approach. What changes, what stays the same, and why this approach was chosen over alternatives."
+      placeholder: |
+        Approach: Invalidate Redis auth cache immediately after email verification
+        write to DB, then return success response.
+
+        Alternatives considered:
+        1. Reduce cache TTL to 30s → rejected: still leaves a window of broken state
+        2. Remove cache entirely → rejected: unacceptable latency increase (p99 > 500ms)
+        3. Cache-aside with event-driven invalidation → chosen: precise, no stale reads
+    validations:
+      required: true
+
+  - type: textarea
+    id: files-in-scope
+    attributes:
+      label: Files In Scope
+      description: "Explicit list of files that WILL be modified. This defines the implementation boundary."
+      placeholder: |
+        - `src/auth/verification.service.ts` — add cache invalidation after DB write
+        - `src/auth/middleware.ts` — add cache-miss fallback to DB
+        - `tests/auth/verification.test.ts` — new test cases
+    validations:
+      required: true
+
+  - type: textarea
+    id: files-out-of-scope
+    attributes:
+      label: Files Out of Scope
+      description: "Files that MUST NOT be modified. Prevents scope creep."
+      placeholder: |
+        - `src/auth/login.ts` — unrelated auth flow
+        - `src/billing/*` — no billing changes in this task
+        - `infrastructure/*` — no infra changes
+    validations:
+      required: true
+
+  - type: textarea
+    id: api-contract-changes
+    attributes:
+      label: API / Interface Contract Changes
+      description: "New or modified endpoints, function signatures, event schemas, DB migrations. Leave empty if no contract changes."
+      placeholder: |
+        No new endpoints. Existing POST /auth/verify response unchanged.
+        New internal event: `auth.cache.invalidated` emitted after verification.
+    validations:
+      required: false
+
+  - type: textarea
+    id: data-model-changes
+    attributes:
+      label: Data Model / Migration Changes
+      description: "DB schema changes, migration scripts, data backfill requirements. Leave empty if none."
+      placeholder: |
+        No schema changes. No migration needed.
+        OR:
+        - New column: `users.cache_version INT DEFAULT 0`
+        - Migration: `migrations/20260401_add_cache_version.sql`
+        - Backfill: not required (default value handles existing rows)
+    validations:
+      required: false
+
+  # ──────────────────────────────────────────────
+  # SECTION 5: DEPENDENCY & IMPACT ANALYSIS
+  # ──────────────────────────────────────────────
+  - type: markdown
+    attributes:
+      value: |
+        ## 5. Dependency & Impact Analysis
+        Map what this change touches and what could break.
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: "Other issues, PRs, services, or teams that this task depends on or blocks."
+      placeholder: |
+        - Depends on: #42 (Redis client upgrade) — must merge first
+        - Blocks: #55 (onboarding flow redesign) — needs verification fix
+        - External: Redis 7.x cluster (ops team confirmed availability)
+    validations:
+      required: false
+
+  - type: textarea
+    id: impact-analysis
+    attributes:
+      label: Impact Analysis
+      description: "What systems, services, or user flows are affected? What could break?"
+      placeholder: |
+        Affected flows:
+        - Email verification → login → dashboard (primary happy path)
+        - Password reset (shares auth cache — must verify no regression)
+
+        Blast radius:
+        - Low: changes are isolated to auth verification path
+        - Cache invalidation is additive (worst case: extra DB read on miss)
+    validations:
+      required: true
+
+  # ──────────────────────────────────────────────
+  # SECTION 6: SECURITY ASSESSMENT
+  # ──────────────────────────────────────────────
+  - type: markdown
+    attributes:
+      value: |
+        ## 6. Security Assessment
+        Every implementation task must include a security assessment. This is non-negotiable.
+
+  - type: dropdown
+    id: security-risk-level
+    attributes:
+      label: Security Risk Level
+      description: "Overall security risk of this change."
+      options:
+        - Low — No auth/data/infra changes, internal-only code paths
+        - Medium — Touches auth, user data, or external integrations
+        - High — Modifies authentication, authorization, encryption, PII handling, or payment flows
+        - Critical — Changes security infrastructure, secrets management, or compliance controls
+    validations:
+      required: true
+
+  - type: textarea
+    id: security-checklist
+    attributes:
+      label: Security Review Checklist
+      description: "Complete ALL items. Mark N/A with justification where not applicable."
+      value: |
+        ### Authentication & Authorization
+        - [ ] No hardcoded credentials, tokens, or secrets in code
+        - [ ] Authentication checks are not bypassed or weakened
+        - [ ] Authorization (RBAC/ABAC) is enforced at the correct layer
+        - [ ] Session management is not degraded
+
+        ### Input Validation & Injection
+        - [ ] All user inputs are validated and sanitized
+        - [ ] No SQL injection vectors introduced
+        - [ ] No XSS vectors introduced (output encoding applied)
+        - [ ] No command injection vectors introduced
+        - [ ] No path traversal vulnerabilities
+        - [ ] No SSRF vectors introduced
+
+        ### Data Protection
+        - [ ] PII/sensitive data is not logged or exposed in error messages
+        - [ ] Data at rest encryption is maintained
+        - [ ] Data in transit uses TLS/HTTPS
+        - [ ] No sensitive data in URL parameters
+        - [ ] GDPR/privacy requirements are maintained
+
+        ### Infrastructure & Dependencies
+        - [ ] No new dependencies with known CVEs
+        - [ ] No overly permissive IAM/RBAC policies
+        - [ ] No secrets committed to repository
+        - [ ] No debug/development endpoints exposed in production
+        - [ ] Rate limiting is maintained on public endpoints
+
+        ### Compliance
+        - [ ] Change is compatible with SOC 2 / GDPR / HIPAA requirements (if applicable)
+        - [ ] Audit logging is maintained for sensitive operations
+        - [ ] Data retention policies are respected
+    validations:
+      required: true
+
+  - type: textarea
+    id: threat-model
+    attributes:
+      label: Threat Model Notes
+      description: "For Medium/High/Critical risk: describe attack vectors considered and mitigations applied."
+      placeholder: |
+        Attack vector: Attacker replays expired verification token
+        Mitigation: Tokens are single-use (deleted after first use) and expire after 24h
+
+        Attack vector: Cache poisoning via race condition
+        Mitigation: Cache invalidation uses atomic DEL, not SET with expiry
+    validations:
+      required: false
+
+  # ──────────────────────────────────────────────
+  # SECTION 7: VALIDATION PLAN
+  # ──────────────────────────────────────────────
+  - type: markdown
+    attributes:
+      value: |
+        ## 7. Validation Plan
+        Define exactly how this task will be verified. Evidence-first: no evidence = not done.
+
+  - type: textarea
+    id: validation-commands
+    attributes:
+      label: Validation Commands
+      description: "Exact commands to prove the implementation works. Must be copy-pasteable."
+      placeholder: |
+        ```bash
+        # Build
+        npm run build
+
+        # Unit tests
+        npm test -- --filter auth/verification
+
+        # Integration tests
+        npm run test:integration -- --filter auth
+
+        # E2E (production path)
+        curl -X POST https://api.example.com/auth/verify \
+          -H "Authorization: Bearer $TEST_TOKEN" \
+          -d '{"token": "test-verification-token"}'
+        # Expected: 200 OK, subsequent API call returns 200 (not 403)
+
+        # Regression check
+        npm run test:e2e
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: test-coverage-plan
+    attributes:
+      label: Test Coverage Plan
+      description: "What tests will be added or modified? Cover happy path, error path, and edge cases."
+      value: |
+        ### Happy Path
+        - [ ] Test case:
+        - [ ] Expected result:
+
+        ### Error Path
+        - [ ] Test case:
+        - [ ] Expected result:
+
+        ### Edge Cases
+        - [ ] Test case:
+        - [ ] Expected result:
+
+        ### Regression
+        - [ ] Existing tests that must continue passing:
+    validations:
+      required: true
+
+  # ──────────────────────────────────────────────
+  # SECTION 8: ROLLBACK STRATEGY
+  # ──────────────────────────────────────────────
+  - type: markdown
+    attributes:
+      value: |
+        ## 8. Rollback Strategy
+        Every change must be reversible. Define how to undo this change safely.
+
+  - type: textarea
+    id: rollback-plan
+    attributes:
+      label: Rollback Plan
+      description: "Exact steps and commands to revert this change in production."
+      placeholder: |
+        ```bash
+        # Revert commit
+        git revert <commit-sha>
+
+        # If DB migration was applied
+        npm run migrate:down -- --to 20260401
+
+        # Verify rollback
+        curl -X GET https://api.example.com/health
+        ```
+
+        Rollback risk: Low — revert restores previous cache behavior.
+        Data loss on rollback: None — no destructive schema changes.
+    validations:
+      required: true
+
+  # ──────────────────────────────────────────────
+  # SECTION 9: EXECUTION PLAN
+  # ──────────────────────────────────────────────
+  - type: markdown
+    attributes:
+      value: |
+        ## 9. Execution Plan
+        How will this work be split and assigned? (For orchestrator/team planning)
+
+  - type: textarea
+    id: task-breakdown
+    attributes:
+      label: Task Breakdown
+      description: "Ordered list of implementation steps. Each step should be independently verifiable."
+      placeholder: |
+        1. [ ] Add cache invalidation to verification service (~30 lines)
+        2. [ ] Add cache-miss fallback to auth middleware (~15 lines)
+        3. [ ] Write unit tests for new cache invalidation logic
+        4. [ ] Write integration test for full verification flow
+        5. [ ] Run full test suite + E2E
+        6. [ ] Open PR with evidence
+    validations:
+      required: true
+
+  - type: textarea
+    id: agent-assignment
+    attributes:
+      label: Agent / Owner Assignment
+      description: "Who executes what? Define file ownership for parallel execution."
+      placeholder: |
+        - Packet A (implementer-1): verification.service.ts, verification.test.ts
+        - Packet B (implementer-2): middleware.ts, middleware.test.ts
+        - QA: Full E2E verification after packets merge
+    validations:
+      required: false
+
+  # ──────────────────────────────────────────────
+  # SECTION 10: REFERENCES & CONTEXT
+  # ──────────────────────────────────────────────
+  - type: textarea
+    id: references
+    attributes:
+      label: References & Additional Context
+      description: "Links to related issues, PRs, docs, Slack threads, dashboards, design docs, or external resources."
+      placeholder: |
+        - Related issue: #42
+        - Design doc: docs/auth-redesign.md
+        - Slack thread: #engineering 2026-03-28
+        - Dashboard: grafana.internal/d/auth-metrics
+        - External: https://redis.io/docs/manual/client-side-caching/
+    validations:
+      required: false

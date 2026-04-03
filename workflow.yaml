@@ -1,0 +1,1294 @@
+# ============================================================================
+# LLM-Guided Software Architecture — Workflow Engine v4.0
+# ============================================================================
+# This file is the deterministic contract that OpenClaw follows step-by-step.
+# Each phase defines: what happens, which tool runs, exact commands, and rules.
+# OpenClaw reads this file and executes each phase in sequence.
+#
+# v4.0 additions over v3.0:
+#   - Contract-compiled pipeline: schema validation after every phase output
+#   - Review-to-plan learning loop: lessons extracted, loaded, and applied
+#   - Spec-to-ship ledger: scorecard per run, composite scoring
+#   - Production-driven closed loop: incident triggers, post-merge verification
+#   - Autonomous ADR engine: architectural decisions persisted when risk >= medium
+#   - Hybrid review: deterministic preflight + LLM synthesis
+#   - Cross-project heuristics packs: importable domain knowledge
+#   - Issue-first enforcement for hotfix and refactor routes
+# ============================================================================
+
+name: "LLM-Guided Software Architecture"
+version: "4.0"
+
+# ---------------------------------------------------------------------------
+# TOOL DEFINITIONS
+# ---------------------------------------------------------------------------
+tools:
+  claude_code:
+    description: "Planning and code review via Claude Code CLI"
+    invoke_pattern: 'claude --print --prompt "{prompt}"'
+    modes:
+      plan: "Prefix prompt with /plan"
+      review: "Prefix prompt with /review"
+
+  codex:
+    description: "Code implementation, testing, and PR creation"
+    invoke_pattern: 'codex --prompt "{prompt}" --full-auto'
+
+  github:
+    description: "Issue and PR management via gh CLI"
+    commands:
+      create_issue: 'gh issue create --title "{title}" --body "{body}" --label "{labels}"'
+      create_pr: 'gh pr create --title "{title}" --body "{body}" --head "{branch}"'
+      merge_pr: 'gh pr merge {pr_number} --squash --delete-branch'
+      close_issue: 'gh issue close {issue_number} --comment "{comment}"'
+
+  schema_validator:
+    description: "JSON Schema validation for phase outputs"
+    invoke_pattern: 'validate-json --schema "{schema_path}" --data "{data_path}"'
+    note: |
+      Every phase that produces structured output MUST be validated against
+      its schema before the workflow advances. If validation fails, the phase
+      is retried. If retry also fails, escalate to the user.
+
+  preflight:
+    description: "Deterministic checks run before LLM review"
+    checks:
+      secret_detection:
+        description: "Regex scan for hardcoded secrets in the diff"
+        patterns:
+          - 'AKIA[0-9A-Z]{16}'                  # AWS access key
+          - '-----BEGIN (RSA |EC )?PRIVATE KEY'  # Private keys
+          - 'password\s*=\s*["\x27][^"\x27]+'    # Hardcoded passwords
+          - 'ghp_[A-Za-z0-9_]{36}'               # GitHub PAT
+          - 'sk-[A-Za-z0-9]{48}'                 # OpenAI/Stripe secret key
+      scope_compliance:
+        description: "Compare diff file list against issue files_in_scope"
+      dependency_audit:
+        description: "Run package manager audit for known vulnerabilities"
+        commands:
+          node: "npm audit --json 2>/dev/null || true"
+          python: "pip audit --format json 2>/dev/null || true"
+          rust: "cargo audit --json 2>/dev/null || true"
+
+# ---------------------------------------------------------------------------
+# OBSERVABILITY — Full Audit Trail
+# ---------------------------------------------------------------------------
+# Every phase transition, tool invocation, and decision is logged.
+# This turns AI development from a black box into a fully auditable system.
+#
+# Log file: .factory/workflow.log (JSONL — one JSON object per line)
+# Session file: .factory/session.json (current run state)
+#
+# OpenClaw MUST write a log entry for every action using this format:
+#
+#   {"ts":"ISO8601","sid":"session-uuid","phase":"strategic_plan",
+#    "action":"invoke_claude","status":"ok|error|retry|skip",
+#    "tool":"claude_code|codex|gh|preflight|schema_validator",
+#    "duration_ms":N,
+#    "detail":"human-readable what happened",
+#    "refs":{"issue":N,"pr":N,"branch":"...","commit":"..."},
+#    "decision":"why this action was taken (rationale)",
+#    "error":"error message if status=error",
+#    "tokens":{"input":N,"output":N},  <- optional, if provider exposes
+#    "cost_usd":N}                     <- optional, if provider exposes
+#
+# Session file tracks cumulative metrics for the current run:
+#
+#   {"session_id":"uuid","feature":"title","started_at":"ISO8601",
+#    "trigger_source":"user|incident|runtime-drift",
+#    "current_phase":"strategic_plan","phases_completed":["intake"],
+#    "tasks":{"total":N,"completed":N,"failed":N,"blocked":N},
+#    "metrics":{"total_duration_ms":N,"retries":N,"review_cycles":N,
+#               "auto_repairs":N,"scope_violations":N,
+#               "lessons_generated":N,
+#               "total_tokens":N,"planning_tokens":N,
+#               "implementation_tokens":N,"review_tokens":N},
+#    "decisions_log":[{"ts":"ISO8601","decision":"...","rationale":"...","phase":"..."}]}
+#
+observability:
+  log_file: ".factory/workflow.log"
+  session_file: ".factory/session.json"
+  format: "jsonl"
+
+  # Every phase MUST emit these events:
+  events:
+    phase_start:
+      fields: [ts, sid, phase, action, status, detail]
+      example: |
+        {"ts":"2026-04-02T14:00:00Z","sid":"abc-123","phase":"strategic_plan",
+         "action":"phase_start","status":"ok",
+         "detail":"Starting strategic planning for feature X"}
+
+    tool_invoke:
+      fields: [ts, sid, phase, action, tool, status, duration_ms, tokens, cost_usd, detail]
+      example: |
+        {"ts":"2026-04-02T14:00:05Z","sid":"abc-123","phase":"strategic_plan",
+         "action":"invoke_claude","tool":"claude_code","status":"ok",
+         "duration_ms":45000,"tokens":{"input":12000,"output":8500},
+         "cost_usd":0.42,
+         "detail":"Strategic plan generated: 4 tasks across 2 waves"}
+
+    schema_validation:
+      fields: [ts, sid, phase, action, tool, status, schema, detail]
+      example: |
+        {"ts":"2026-04-02T14:00:06Z","sid":"abc-123","phase":"strategic_plan",
+         "action":"schema_validate","tool":"schema_validator","status":"ok",
+         "schema":"schemas/strategic-plan.schema.json",
+         "detail":"Output validated against strategic plan schema"}
+
+    decision:
+      fields: [ts, sid, phase, action, decision, detail]
+      example: |
+        {"ts":"2026-04-02T14:01:00Z","sid":"abc-123","phase":"strategic_plan",
+         "action":"decision","decision":"split_into_4_tasks",
+         "detail":"Feature requires auth + API + DB + tests — split by file ownership"}
+
+    error:
+      fields: [ts, sid, phase, action, status, error, detail]
+      example: |
+        {"ts":"2026-04-02T14:05:00Z","sid":"abc-123","phase":"implementation",
+         "action":"invoke_codex","status":"error",
+         "error":"build failed: missing import",
+         "detail":"Retry 1/2 — including error context in next attempt"}
+
+    phase_end:
+      fields: [ts, sid, phase, action, status, duration_ms, detail, refs]
+      example: |
+        {"ts":"2026-04-02T14:02:00Z","sid":"abc-123","phase":"issue_creation",
+         "action":"phase_end","status":"ok","duration_ms":15000,
+         "detail":"Created 4 task issues + 1 parent",
+         "refs":{"issue":42,"parent_issue":41}}
+
+    lesson_extracted:
+      fields: [ts, sid, phase, action, lesson_id, pattern, scope]
+      example: |
+        {"ts":"2026-04-02T14:10:00Z","sid":"abc-123","phase":"code_review",
+         "action":"lesson_extracted","lesson_id":"lesson-0042",
+         "pattern":"missing rate limiting on public endpoints",
+         "scope":"same-stack"}
+
+    post_merge_verification:
+      fields: [ts, sid, phase, action, status, detail]
+      example: |
+        {"ts":"2026-04-02T15:00:00Z","sid":"abc-123","phase":"merge",
+         "action":"post_merge_verify","status":"ok",
+         "detail":"Health check passed, incident fingerprint no longer firing"}
+
+  # Metrics tracked per session — aligned with schemas/scorecard.schema.json
+  # Required = always tracked. Optional = tracked when tool/provider exposes data.
+  metrics:
+    required:
+      - name: "total_duration_ms"
+        description: "Wall clock time from intake to completion"
+      - name: "planning_ms"
+        description: "Time in strategic + tactical planning phases"
+      - name: "implementation_ms"
+        description: "Time in implementation phase (all tasks)"
+      - name: "review_ms"
+        description: "Time in code review phase (all cycles)"
+      - name: "retries_total"
+        description: "Total implementation retries across all tasks"
+      - name: "review_cycles_avg"
+        description: "Average review iterations per PR"
+      - name: "auto_repairs"
+        description: "Times implementation failed and was auto-repaired"
+      - name: "tasks_completed"
+        description: "Number of tasks successfully merged"
+      - name: "tasks_failed"
+        description: "Number of tasks that required human escalation"
+      - name: "security_findings"
+        description: "Security findings by severity: {critical, important, advisory}"
+      - name: "scope_violations"
+        description: "Times an agent modified files outside scope"
+      - name: "scope_churn_ratio"
+        description: "Files changed outside scope / total files changed (0.0 = perfect)"
+      - name: "escaped_defects"
+        description: "Defects found post-merge (updated retroactively)"
+      - name: "post_merge_regressions"
+        description: "Regressions detected after merge (updated retroactively)"
+      - name: "lessons_generated"
+        description: "New lessons extracted from this run"
+      - name: "composite_score"
+        description: "0-100 score computed per docs/METRICS.md formula"
+    optional:
+      - name: "tokens.total"
+        description: "Sum of all input + output tokens (if provider exposes)"
+      - name: "tokens.planning"
+        description: "Tokens used in planning phases"
+      - name: "tokens.implementation"
+        description: "Tokens used in implementation phases"
+      - name: "tokens.review"
+        description: "Tokens used in review phases"
+      - name: "total_cost_usd"
+        description: "Estimated cost based on token usage (if provider exposes)"
+
+  # Decisions log — every non-trivial choice the orchestrator makes
+  decision_categories:
+    - "task_split"          # How the feature was broken into tasks
+    - "wave_assignment"     # Why tasks were grouped into specific waves
+    - "retry_decision"      # Why a retry was attempted vs escalated
+    - "scope_change"        # Why scope was expanded/reduced
+    - "tool_selection"      # Why a specific tool/model was chosen
+    - "review_verdict"      # Why review approved or requested changes
+    - "escalation"          # Why human intervention was requested
+    - "security_override"   # Any security exception with justification
+    - "adr_required"        # Why an architectural decision record was created
+    - "lesson_extracted"    # Why a lesson was recorded from findings
+    - "pack_loaded"         # Which heuristics packs were activated and why
+    - "reopen_decision"     # Why an issue was reopened after post-merge failure
+
+# ---------------------------------------------------------------------------
+# WORKFLOW CONFIGURATION
+# ---------------------------------------------------------------------------
+config:
+  max_review_cycles: 3
+  max_implementation_retries: 2
+  max_concurrent_issues: 3
+  require_security_assessment: true
+  require_test_evidence: true
+
+  # Branch naming — deterministic pattern for all change classes
+  branch_pattern:
+    format: "{type}/#{issue_number}-{slug}"
+    type_mapping:
+      hotfix: "fix"
+      feature: "feat"
+      refactor: "refactor"
+      risky-infra: "infra"
+    slug_rules: |
+      Derived from task title. Rules:
+        1. Convert to lowercase
+        2. Replace spaces and special characters with hyphens
+        3. Collapse consecutive hyphens
+        4. Truncate to 40 characters
+        5. Strip trailing hyphens
+      Example: "Add Rate Limiting to Public API Endpoints" -> "add-rate-limiting-to-public-api-endpoint"
+
+  # Trigger source — how this workflow was initiated
+  trigger_source:
+    type: "enum"
+    values:
+      - "user"            # Default — human initiated the workflow
+      - "incident"        # From monitoring (Sentry, PagerDuty, etc.)
+      - "runtime-drift"   # From watchdog (Discord, health checks, etc.)
+    default: "user"
+
+  # Incident context — required when trigger_source is "incident"
+  incident_context:
+    required_when: "trigger_source == 'incident'"
+    fields:
+      error_fingerprint: "Unique identifier from the monitoring system"
+      stack_trace: "Full or partial stack trace of the failure"
+      affected_service: "Which service/endpoint is broken"
+      environment: "production | staging"
+      first_seen: "ISO8601 timestamp of first occurrence"
+      last_seen: "ISO8601 timestamp of most recent occurrence"
+      incident_url: "Link to the incident in the monitoring system"
+
+  # Post-merge verification — checks that the fix actually worked
+  post_merge_verification:
+    enabled: true
+    steps:
+      - "Wait for deploy pipeline to complete"
+      - "Run health check against affected service/endpoint"
+      - "If trigger_source is 'incident': check if error fingerprint is still firing"
+      - "If trigger_source is 'runtime-drift': re-run watchdog health contract"
+    timeout_minutes: 30
+
+  # Reopen policy — what happens when post-merge verification fails
+  reopen_policy:
+    trigger: "post_merge_verification fails"
+    actions:
+      - "Reopen the original issue"
+      - "Add label: 'regression'"
+      - "Add recurrence metadata: attempt_number, previous_pr, failure_evidence"
+      - "Re-enter the workflow at strategic_plan phase with failure context"
+    max_reopen_attempts: 2
+    on_exhausted: "Escalate to user with full recurrence history"
+
+  # Heuristics packs — cross-project domain knowledge
+  packs:
+    description: |
+      List of heuristics pack names to activate for this project.
+      Packs are loaded from the packs/ directory and must match
+      schemas/heuristics-pack.schema.json.
+    active: []
+    # Example: ["pack-saas-api", "pack-fintech-backend"]
+
+  # Schema validation — enforced after every phase that produces structured output
+  schema_validation:
+    rule: |
+      After every phase that produces structured JSON output, validate the
+      output against the corresponding schema. If validation fails, retry
+      the phase once. If the retry also fails, escalate to the user.
+    schemas:
+      strategic_plan: "schemas/strategic-plan.schema.json"
+      tactical_plan: "schemas/tactical-plan.schema.json"
+      code_review: "schemas/review-output.schema.json"
+      scorecard: "schemas/scorecard.schema.json"
+      lesson: "schemas/lesson.schema.json"
+      heuristics_pack: "schemas/heuristics-pack.schema.json"
+
+# ---------------------------------------------------------------------------
+# ROUTING — Change class defines the weight of the process
+# ---------------------------------------------------------------------------
+# The change class determines which phases are executed.
+# Heavier process only when the risk justifies it.
+#
+# IMPORTANT: Every change class creates at least one GitHub Issue before
+# any code is written. This is non-negotiable per AGENTS.md.
+#
+routing:
+  hotfix:
+    description: "Production is broken. Fix it now."
+    phases: [intake, implementation, code_review, merge]
+    overrides:
+      max_review_cycles: 1
+      require_security_assessment: false
+      review_mode: "lightweight"
+      pr_body: "minimal"
+
+    # ── Hotfix Task Contract ──
+    # Since hotfix skips planning, the orchestrator must construct a minimal
+    # task object from the user request DURING INTAKE, before implementation.
+    # This is the contract that replaces strategic/tactical planning for hotfixes.
+    hotfix_task_contract:
+      required_fields:
+        title: "Short description of what is broken and the fix"
+        description: "What is broken, why, and what the fix does"
+        files_in_scope: "Files the implementer is allowed to modify (determined by orchestrator analysis of the error)"
+        acceptance_criteria: "At minimum: 'the specific failure described no longer occurs'"
+        rollback: "Exact command to revert (typically: git revert {commit_sha})"
+      optional_fields:
+        incident_context: "Error fingerprint, stack trace, affected service (when trigger_source is incident)"
+        files_out_of_scope: "Files that must not be touched"
+      construction: |
+        The orchestrator builds this task object during INTAKE by:
+        1. Parsing the user request or incident context
+        2. Identifying the likely affected files (from error stack trace or user description)
+        3. Setting acceptance_criteria to the inverse of the reported failure
+        4. Setting rollback to "git revert HEAD"
+        This task object is then used to:
+        - Create the inline issue (Phase 5 setup)
+        - Scope the implementation (Codex prompt)
+        - Scope the review (Claude Code /review)
+        - Close the issue with evidence (Phase 7)
+
+  feature:
+    description: "New functionality. Full pipeline."
+    phases: [intake, strategic_plan, issue_creation, tactical_plan, implementation, code_review, merge, completion]
+    # All phases, all gates, proportional security assessment
+    overrides: {}
+
+  refactor:
+    description: "Code improvement. Plan + implement + review."
+    phases: [intake, strategic_plan, implementation, code_review, merge]
+    # Skip: issue_creation (as a separate phase), tactical_plan
+    # A single issue is created from the strategic plan output,
+    # after the plan phase completes and before implementation begins.
+    issue_creation: |
+      After strategic_plan completes, create a single GitHub Issue from the
+      plan output. The issue includes:
+        - Strategic plan summary as the body
+        - files_in_scope from all tasks (merged)
+        - Acceptance criteria from all tasks (merged)
+        - Label: "refactor"
+      The issue number is then used for branch naming and PR linkage.
+    overrides:
+      require_security_assessment: "only if touching auth, data, or external input"
+
+  risky-infra:
+    description: "Infrastructure changes. Full pipeline + extra caution."
+    phases: [intake, strategic_plan, issue_creation, tactical_plan, implementation, code_review, merge, completion]
+    # All phases + stricter review
+    overrides:
+      max_review_cycles: 5
+      require_security_assessment: true
+      review_mode: "thorough"
+
+# ---------------------------------------------------------------------------
+# PHASE 1: INTAKE
+# ---------------------------------------------------------------------------
+phases:
+  - id: intake
+    name: "Intake"
+    description: "Receive user input, classify, and prepare context"
+    executor: openclaw
+
+    steps:
+      - action: "Initialize session"
+        log: |
+          {"action":"session_init","status":"ok",
+           "detail":"New workflow session started"}
+        setup: |
+          mkdir -p .factory .factory/lessons .factory/scorecards
+          Initialize .factory/session.json with:
+            session_id: (uuid)
+            started_at: (ISO8601)
+            trigger_source: (user | incident | runtime-drift)
+            current_phase: "intake"
+            phases_completed: []
+            metrics: all zeros
+          Initialize .factory/workflow.log as empty JSONL file
+
+      - action: "Receive user's feature/task description in natural language"
+        note: |
+          If trigger_source is "incident", the description comes from
+          the monitoring system and includes incident_context fields.
+          If trigger_source is "runtime-drift", the description comes
+          from the watchdog and includes the health check failure details.
+
+      - action: "Classify change type"
+        options: [hotfix, feature, refactor, risky-infra]
+        default: feature
+        note: |
+          If trigger_source is "incident", default to hotfix.
+          If trigger_source is "runtime-drift", default to hotfix
+          unless the watchdog analysis indicates a design-level fix
+          is needed, in which case classify as feature or refactor.
+
+      - action: "Verify AGENTS.md exists in project root"
+        on_missing: "Copy AGENTS.md from software-factory repo to project root"
+
+      - action: "Load active heuristics packs"
+        condition: "config.packs.active is non-empty"
+        steps:
+          - "For each pack name in config.packs.active:"
+          - "  Load packs/{pack_name}.json"
+          - "  Validate against schemas/heuristics-pack.schema.json"
+          - "  Store pack.planning_rules and pack.review_checks for later phases"
+          - "  Store pack.lessons as additional context for planning"
+        log: |
+          {"action":"pack_loaded","phase":"intake","status":"ok",
+           "detail":"Loaded heuristics packs: {pack_names}"}
+
+      - action: "Log intake completion"
+        log: |
+          {"action":"phase_end","phase":"intake","status":"ok",
+           "detail":"Classified as {change_class}, trigger={trigger_source}, session initialized"}
+
+    output:
+      user_request: "The original feature description"
+      change_class: "Classified change type"
+      project_path: "Path to the target project"
+      trigger_source: "How the workflow was initiated"
+      incident_context: "Incident details (if trigger_source is incident)"
+      active_packs: "Loaded heuristics packs (if any)"
+
+  # -------------------------------------------------------------------------
+  # PHASE 2: STRATEGIC PLANNING
+  # -------------------------------------------------------------------------
+  - id: strategic_plan
+    name: "Strategic Planning"
+    description: "Claude Code analyzes codebase and produces task breakdown"
+    executor: claude_code
+    mode: plan
+
+    setup:
+      - action: "Copy templates/CLAUDE_PLAN.md to {project_path}/CLAUDE.md"
+        note: "This becomes Claude Code's instruction file for this session"
+
+      - action: "Load lessons for planning context"
+        steps:
+          - "Scan .factory/lessons/ for JSON files matching schemas/lesson.schema.json"
+          - "Filter to lessons with scope 'this-project' or 'same-stack' or 'universal'"
+          - "Filter to lessons with confidence 'high' or 'medium'"
+          - "Sort by times_seen descending, then by last_seen descending"
+          - "Take top 20 most relevant lessons"
+          - "Format as a lessons block to include in the planning prompt"
+        log: |
+          {"action":"lessons_loaded","phase":"strategic_plan","status":"ok",
+           "detail":"Loaded {lesson_count} lessons for planning context"}
+
+      - action: "Prepare pack planning rules"
+        condition: "active_packs is non-empty"
+        steps:
+          - "Collect planning_rules from all active packs"
+          - "Format as additional constraints for the planner"
+
+    command: |
+      claude --print --prompt "/plan
+      ## User Request
+      {user_request}
+
+      ## Change Class
+      {change_class}
+
+      ## Trigger Source
+      {trigger_source}
+      {incident_context if trigger_source == 'incident'}
+
+      ## Lessons from Previous Runs
+      The following lessons were extracted from past reviews and failures.
+      Apply relevant ones to this plan — reference them in lessons_consulted[].
+      {formatted_lessons}
+
+      ## Pack Constraints
+      {pack_planning_rules if active_packs}
+
+      ## Instructions
+      Analyze the codebase and produce a strategic plan following CLAUDE.md instructions.
+      Output MUST be valid JSON matching schemas/strategic-plan.schema.json.
+      Break the work into atomic, independently-implementable tasks.
+      Each task must have explicit file boundaries and acceptance criteria.
+      Include security threat assessment for each task.
+      If any task has security_risk_level medium or higher AND the plan involves
+      architectural choices, include architectural_decisions[] in the output.
+      Reference any lessons from previous runs that informed your decisions
+      in the lessons_consulted[] field."
+
+    output:
+      strategic_plan: "JSON matching schemas/strategic-plan.schema.json"
+
+    validate:
+      - action: "Schema validation"
+        command: 'validate-json --schema "schemas/strategic-plan.schema.json" --data "{strategic_plan_output}"'
+        on_failure:
+          retry: 1
+          escalate: "Alert user: strategic plan output does not match schema after retry"
+      - action: "Business rule: disjoint file ownership"
+        check: |
+          For every pair of tasks in the same wave, verify that their
+          files_in_scope arrays have no intersection. If any two tasks
+          share a file within the same wave, fail validation.
+        on_failure:
+          retry: 1
+          escalate: "Alert user: tasks in the same wave share files — plan must be restructured"
+
+    rules:
+      - "Plan must have at least 1 task"
+      - "Each task must have files_in_scope with at least 1 file"
+      - "Each task must have acceptance_criteria with at least 1 criterion"
+      - "No two tasks in the same wave may share files_in_scope (disjoint ownership)"
+      - "If any task has security_risk_level medium+ AND plan involves architectural choices, architectural_decisions[] is required"
+      - "All lessons_consulted entries must reference a real lesson_id from the loaded lessons"
+
+    adr_engine:
+      description: |
+        If the strategic plan output includes architectural_decisions[],
+        persist each decision as an ADR after the plan is approved.
+      steps:
+        - "For each entry in strategic_plan.architectural_decisions[]:"
+        - "  Generate ADR filename: adr/{NNN}-{kebab-case-title}.md"
+        - "  Write ADR using standard format: Title, Status, Context, Decision, Alternatives, Consequences"
+        - "  Commit ADR to the working branch (not main)"
+      log: |
+        {"action":"adr_persisted","phase":"strategic_plan","status":"ok",
+         "detail":"Persisted {adr_count} architectural decision records to adr/"}
+
+    log_on_success: |
+      {"action":"tool_invoke","phase":"strategic_plan","tool":"claude_code",
+       "status":"ok","tokens":{"input":"$INPUT_TOKENS","output":"$OUTPUT_TOKENS"},
+       "detail":"Plan generated: {task_count} tasks across {wave_count} waves",
+       "decision":"task_split: {strategic_plan.solution_overview}"}
+    log_on_error: |
+      {"action":"tool_invoke","phase":"strategic_plan","tool":"claude_code",
+       "status":"error","error":"$ERROR_MSG",
+       "detail":"Strategic planning failed"}
+
+    on_error:
+      retry: 2
+      log_retry: |
+        {"action":"retry","phase":"strategic_plan",
+         "detail":"Retry {n}/2 with additional context"}
+      escalate: "Alert user: strategic planning failed after retries"
+
+  # -------------------------------------------------------------------------
+  # PHASE 2.5: INLINE ISSUE CREATION FOR REFACTOR
+  # -------------------------------------------------------------------------
+  # This is not a standalone phase — it executes between strategic_plan and
+  # implementation when change_class is "refactor". Documented here for
+  # completeness. The routing section defines when this fires.
+  #
+  # When change_class == "refactor":
+  #   After strategic_plan completes, before implementation begins:
+  #     1. Merge files_in_scope from all tasks into a single list
+  #     2. Merge acceptance_criteria from all tasks into a single list
+  #     3. Create a single GitHub Issue:
+  #        gh issue create \
+  #          --title "[REFACTOR] {strategic_plan.feature_title}" \
+  #          --body "{strategic_plan.solution_overview}\n\n## Files\n{merged_files}\n\n## Acceptance Criteria\n{merged_criteria}" \
+  #          --label "refactor"
+  #     4. Store the issue_number for branch naming and PR linkage
+  #     5. Log:
+  #        {"action":"phase_end","phase":"inline_issue_creation","status":"ok",
+  #         "detail":"Created refactor issue #{issue_number}",
+  #         "refs":{"issue":issue_number}}
+
+  # -------------------------------------------------------------------------
+  # PHASE 3: ISSUE CREATION
+  # -------------------------------------------------------------------------
+  - id: issue_creation
+    name: "Issue Creation"
+    description: "OpenClaw creates GitHub Issues for each task from the plan"
+    executor: openclaw
+    skip_for: [hotfix, refactor]
+
+    steps:
+      - action: "Create parent tracking issue"
+        command: |
+          gh issue create \
+            --title "[FEATURE] {strategic_plan.feature_title}" \
+            --body "## Feature Overview
+
+          {strategic_plan.problem_statement}
+
+          ## Task Breakdown
+          {for each task: - [ ] task.title (wave task.wave)}
+
+          ## Validation
+          ```
+          {strategic_plan.validation_commands}
+          ```
+
+          ## Rollback
+          ```
+          {strategic_plan.rollback}
+          ```" \
+            --label "feature,tracking"
+        output: parent_issue_number
+
+      - action: "For each task in strategic_plan.tasks, create a child issue"
+        template: "templates/ISSUE_BODY.md"
+        command: |
+          gh issue create \
+            --title "[TASK] {task.title}" \
+            --body "{rendered_issue_body}" \
+            --label "task,wave-{task.wave}"
+        output: "task.issue_number (stored per task)"
+
+    output:
+      parent_issue: "Parent tracking issue number"
+      task_issues: "Map of task_id -> issue_number"
+
+  # -------------------------------------------------------------------------
+  # PHASE 4: TACTICAL PLANNING (per issue)
+  # -------------------------------------------------------------------------
+  - id: tactical_plan
+    name: "Tactical Planning"
+    description: "Claude Code creates detailed implementation plan per issue"
+    executor: claude_code
+    mode: plan
+    loop: "For each task issue (ordered by wave)"
+
+    setup:
+      - action: "Ensure templates/CLAUDE_PLAN.md is at {project_path}/CLAUDE.md"
+
+      - action: "Load lessons for tactical planning context"
+        steps:
+          - "Scan .factory/lessons/ for JSON files matching schemas/lesson.schema.json"
+          - "Filter to lessons relevant to the current task's files_in_scope"
+          - "Filter to lessons relevant to the current task's security_risk_level"
+          - "Sort by relevance (file overlap, then times_seen, then confidence)"
+          - "Take top 10 most relevant lessons"
+          - "Format as a lessons block to include in the planning prompt"
+        log: |
+          {"action":"lessons_loaded","phase":"tactical_plan","status":"ok",
+           "detail":"Loaded {lesson_count} lessons for task {task.id}"}
+
+      - action: "Prepare pack planning rules"
+        condition: "active_packs is non-empty"
+        steps:
+          - "Collect planning_rules from all active packs"
+          - "Filter to rules whose trigger matches the current task context"
+
+    command: |
+      claude --print --prompt "/plan
+      ## Issue #{task.issue_number}: {task.title}
+
+      ## Description
+      {task.description}
+
+      ## Files In Scope
+      {task.files_in_scope}
+
+      ## Files Out of Scope
+      {task.files_out_of_scope}
+
+      ## Acceptance Criteria
+      {task.acceptance_criteria}
+
+      ## Security Risk Level
+      {task.security_risk_level}
+
+      ## Lessons from Previous Runs
+      Apply these lessons as preventive controls in your plan.
+      Reference them in lessons_consulted[] with what you added because of each.
+      {formatted_lessons}
+
+      ## Pack Constraints
+      {pack_planning_rules if active_packs}
+
+      ## Instructions
+      Create a detailed implementation plan for this specific issue.
+      Read each file in scope completely before planning.
+      Define exact functions to create/modify/delete.
+      Define test strategy (unit + integration + edge cases).
+      Output MUST be valid JSON matching schemas/tactical-plan.schema.json."
+
+    output:
+      tactical_plan: "JSON matching schemas/tactical-plan.schema.json"
+
+    validate:
+      - action: "Schema validation"
+        command: 'validate-json --schema "schemas/tactical-plan.schema.json" --data "{tactical_plan_output}"'
+        on_failure:
+          retry: 1
+          escalate: "Comment on issue: tactical plan does not match schema after retry"
+
+    rules:
+      - "Every file referenced must be in files_in_scope"
+      - "Implementation steps must be ordered"
+      - "Test strategy must cover happy path + error path"
+      - "All lessons_consulted entries must reference real lesson IDs"
+
+    on_error:
+      retry: 2
+      escalate: "Comment on issue: tactical planning failed, needs human review"
+
+  # -------------------------------------------------------------------------
+  # PHASE 5: IMPLEMENTATION (per issue)
+  # -------------------------------------------------------------------------
+  - id: implementation
+    name: "Implementation"
+    description: "Codex implements the issue following the tactical plan"
+    executor: codex
+    loop: "For each task issue (parallel within same wave, sequential across waves)"
+
+    setup:
+      - action: "Create inline issue (hotfix only)"
+        condition: "change_class == 'hotfix'"
+        description: |
+          Before any code is written, create a single GitHub Issue for the hotfix.
+          This satisfies the AGENTS.md rule that every code change starts with an issue.
+        command: |
+          gh issue create \
+            --title "[HOTFIX] {user_request_summary}" \
+            --body "## Hotfix
+
+          {user_request}
+
+          ## Incident Context
+          {incident_context if trigger_source == 'incident'}
+
+          ## Files In Scope
+          {task.files_in_scope}
+
+          ## Acceptance Criteria
+          - The specific failure described above no longer occurs
+          - Build passes
+          - Existing tests pass
+          - No regressions in affected service
+
+          ## Rollback
+          \`\`\`
+          git revert {commit_sha}
+          \`\`\`" \
+            --label "hotfix,{trigger_source}"
+        output: task.issue_number
+        log: |
+          {"action":"inline_issue_created","phase":"implementation","status":"ok",
+           "detail":"Created hotfix issue #{task.issue_number}",
+           "refs":{"issue":"task.issue_number"}}
+
+      - action: "Create feature branch"
+        command: |
+          git checkout -b {type_mapping[change_class]}/#{task.issue_number}-{slug(task.title)} main
+        note: |
+          Branch name uses config.branch_pattern with:
+            type = config.branch_pattern.type_mapping[change_class]
+            slug = kebab-case of task.title truncated to 40 chars
+          Example: feat/#42-add-rate-limiting-to-public-api-en
+
+      - action: "Remove CLAUDE.md if present (Codex doesn't use it)"
+
+    command: |
+      codex --prompt "
+      ## Task: {task.title} (Issue #{task.issue_number})
+
+      ## CRITICAL RULES
+      1. ONLY modify files listed in Files In Scope
+      2. Do NOT modify any file in Files Out of Scope
+      3. Follow implementation steps in exact order
+      4. Run build and test commands after every change
+      5. Commit with message referencing #{task.issue_number}
+
+      ## Implementation Steps
+      {tactical_plan.implementation_steps}
+
+      ## Test Strategy
+      {tactical_plan.test_strategy}
+
+      ## Security Checks
+      {tactical_plan.security_checks}
+
+      ## Validation (run these when done)
+      Build: {validation_commands.build}
+      Test: {validation_commands.test}
+
+      ## After Implementation
+      1. Run build — must pass with zero errors
+      2. Run tests — all must pass
+      3. Commit: git add . && git commit -m '{task.title} (#{task.issue_number})'
+      4. Push: git push -u origin {branch_name}
+      5. Create PR:
+         gh pr create --title '{task.title}' --body 'Closes #{task.issue_number}
+
+         ## Summary
+         {task.description}
+
+         ## Changes Made
+         {list of changed files}
+
+         ## Validation Evidence
+         {paste build/test output}
+
+         ## Security Review
+         {tactical_plan.security_checks results}
+
+         ## Rollback
+         ```
+         git revert {commit_sha}
+         ```'
+      " --full-auto
+
+    output:
+      pr_number: "Created PR number"
+      branch_name: "Feature branch name"
+      build_evidence: "Build output"
+      test_evidence: "Test output"
+
+    rules:
+      - "Build must pass before PR creation"
+      - "All tests must pass before PR creation"
+      - "PR must reference the issue number"
+      - "PR body must include validation evidence"
+      - "An issue must exist before any code is written (enforced in setup)"
+
+    on_error:
+      retry: 2
+      on_retry: "Include error output in next attempt for context"
+      escalate: "Comment on issue: implementation failed, needs human review"
+
+  # -------------------------------------------------------------------------
+  # PHASE 6: CODE REVIEW (Hybrid: Deterministic Preflight + LLM Review)
+  # -------------------------------------------------------------------------
+  - id: code_review
+    name: "Code Review"
+    description: |
+      Hybrid review: deterministic preflight checks run first, then
+      Claude Code reviews the PR with preflight findings as additional input.
+    executor: openclaw
+    loop: "For each PR created in Phase 5"
+
+    # Step 1: Deterministic preflight checks (machine-only, no LLM)
+    preflight:
+      - id: secret_detection
+        name: "Secret Detection"
+        description: "Regex scan of the PR diff for hardcoded secrets"
+        command: |
+          Get the PR diff via: gh pr diff {pr_number}
+          Scan each added line against these patterns:
+            - AKIA[0-9A-Z]{16}                    (AWS access key ID)
+            - -----BEGIN (RSA |EC )?PRIVATE KEY     (Private keys)
+            - password\s*=\s*["'][^"']+             (Hardcoded passwords)
+            - ghp_[A-Za-z0-9_]{36}                  (GitHub PAT)
+            - sk-[A-Za-z0-9]{48}                    (OpenAI/Stripe secret key)
+          If any match: severity=critical, auto_block=true
+        output:
+          findings: "List of {pattern_matched, file, line_number, severity}"
+
+      - id: scope_compliance
+        name: "Scope Compliance"
+        description: "Verify diff only touches files declared in files_in_scope"
+        command: |
+          Get list of changed files via: gh pr diff {pr_number} --name-only
+          Compare against task.files_in_scope.
+          Any file in the diff that is NOT in files_in_scope is a scope violation.
+        output:
+          violations: "List of {file, reason} for out-of-scope modifications"
+          scope_churn_ratio: "out_of_scope_files / total_files_changed"
+
+      - id: dependency_audit
+        name: "Dependency Audit"
+        description: "Run package manager vulnerability audit"
+        command: |
+          Detect package manager from project files:
+            - package.json -> npm audit --json
+            - requirements.txt / pyproject.toml -> pip audit --format json
+            - Cargo.toml -> cargo audit --json
+          Report any HIGH or CRITICAL vulnerabilities.
+        output:
+          vulnerabilities: "List of {package, severity, advisory_url}"
+
+    preflight_output:
+      machine_findings: |
+        Combined output from all preflight checks, structured as:
+        {
+          "secret_findings": [...],
+          "scope_violations": [...],
+          "scope_churn_ratio": N,
+          "dependency_vulnerabilities": [...],
+          "preflight_passed": true|false
+        }
+      auto_block: |
+        If any secret_findings exist, the PR is auto-blocked.
+        The LLM reviewer still runs but the PR cannot be approved
+        until secrets are removed regardless of LLM verdict.
+
+    # Step 2: LLM review with preflight findings as input
+    setup:
+      - action: "Copy templates/CLAUDE_REVIEW.md to {project_path}/CLAUDE.md"
+
+      - action: "Prepare pack review checks"
+        condition: "active_packs is non-empty"
+        steps:
+          - "Collect review_checks from all active packs"
+          - "Format as additional checklist items for the reviewer"
+
+    command: |
+      claude --print --prompt "/review
+      ## PR #{pr_number}
+
+      Review this PR against issue #{task.issue_number}.
+
+      ## Requirements
+      - Acceptance criteria: {task.acceptance_criteria}
+      - Files in scope: {task.files_in_scope}
+      - Security risk: {task.security_risk_level}
+
+      ## Machine Findings (Deterministic Preflight)
+      The following findings were produced by automated checks before your review.
+      You MUST acknowledge each finding in machine_findings_acknowledged[].
+      If a finding is valid, include it in your findings[]. If a finding is a
+      false positive, explain why in your acknowledgment.
+
+      {machine_findings}
+
+      ## Pack Review Checks
+      {pack_review_checks if active_packs}
+
+      ## Review Instructions
+      Follow the CLAUDE.md review contract.
+      Check: correctness, security (OWASP), performance, test coverage, scope compliance.
+      Synthesize machine findings with your own analysis — do not duplicate, do not ignore.
+      Output MUST be valid JSON matching schemas/review-output.schema.json.
+      Verdict: APPROVE or REQUEST_CHANGES with specific findings."
+
+    output:
+      review_output: "JSON matching schemas/review-output.schema.json"
+      verdict: "APPROVE | REQUEST_CHANGES"
+      findings: "List of findings with severity and recommendations"
+
+    validate:
+      - action: "Schema validation"
+        command: 'validate-json --schema "schemas/review-output.schema.json" --data "{review_output}"'
+        on_failure:
+          retry: 1
+          escalate: "Alert user: review output does not match schema after retry"
+
+    # Step 3: Learning loop — extract lessons from findings
+    learning_loop:
+      condition: "findings is non-empty AND verdict == 'REQUEST_CHANGES'"
+      description: |
+        When the review produces findings, extract reusable lessons that
+        can prevent the same class of issue in future planning and implementation.
+      steps:
+        - action: "For each finding with root_cause and preventive_rule:"
+          steps:
+            - "Check if a lesson with the same pattern already exists in .factory/lessons/"
+            - "If exists: increment times_seen, update last_seen"
+            - "If new: create a new lesson JSON file matching schemas/lesson.schema.json"
+            - "  id: lesson-{next_sequence_number}"
+            - "  source_phase: code_review"
+            - "  source_ref: {issue, pr, finding_index, session_id}"
+            - "  pattern: from finding.root_cause"
+            - "  preventive_rule: from finding.preventive_rule"
+            - "  scope: from finding.reusability_scope (default: this-project)"
+            - "  confidence: medium (upgraded to high after times_seen >= 3)"
+            - "Validate against schemas/lesson.schema.json"
+            - "Save to .factory/lessons/{lesson_id}.json"
+      log: |
+        {"action":"lessons_extracted","phase":"code_review","status":"ok",
+         "detail":"Extracted {new_count} new lessons, updated {updated_count} existing"}
+
+    on_verdict:
+      APPROVE:
+        - action: "Post approval comment on PR"
+        - action: "Proceed to Phase 7 (merge)"
+
+      REQUEST_CHANGES:
+        - action: "Post findings as PR comment"
+        - action: "Send findings to Codex for fixes"
+          command: |
+            codex --prompt "
+            Fix these code review findings in PR #{pr_number}.
+
+            ## Findings
+            {findings}
+
+            ## Machine Findings
+            {machine_findings that were validated by reviewer}
+
+            ## Rules
+            - Only modify files in scope: {task.files_in_scope}
+            - Run build and tests after fixing
+            - Commit and push to the PR branch
+            " --full-auto
+        - action: "Re-run review (back to Phase 6)"
+          note: "Preflight checks are re-run on the updated diff as well"
+          max_cycles: "{config.max_review_cycles}"
+          on_exhausted: "Comment on PR: review cycle limit reached, needs human review"
+
+  # -------------------------------------------------------------------------
+  # PHASE 7: MERGE & CLOSE
+  # -------------------------------------------------------------------------
+  - id: merge
+    name: "Merge & Close"
+    description: "Merge approved PR, close linked issue, verify post-merge"
+    executor: openclaw
+
+    preconditions:
+      - "Review verdict is APPROVE"
+      - "CI checks are passing"
+      - "No preflight auto_block flags active"
+
+    steps:
+      - action: "Wait for CI checks to pass"
+        command: "gh pr checks {pr_number} --watch"
+        timeout: 600
+
+      - action: "Merge PR"
+        command: "gh pr merge {pr_number} --squash --delete-branch"
+
+      - action: "Close issue with evidence"
+        command: |
+          gh issue close {task.issue_number} --comment "
+          ## Completed
+          - PR: #{pr_number} (merged)
+          - Build: passing
+          - Tests: passing
+          - Review: approved
+          All acceptance criteria met."
+
+      - action: "Post-merge verification"
+        condition: "config.post_merge_verification.enabled"
+        steps:
+          - "Wait for deploy pipeline to complete (timeout: {config.post_merge_verification.timeout_minutes} minutes)"
+          - "Run health check against affected service/endpoint"
+          - condition: "trigger_source == 'incident'"
+            action: |
+              Check if the error fingerprint from incident_context is still firing.
+              Query the monitoring system for new occurrences since merge.
+          - condition: "trigger_source == 'runtime-drift'"
+            action: |
+              Re-run the watchdog health contract to verify drift is resolved.
+        log: |
+          {"action":"post_merge_verify","phase":"merge","status":"{pass|fail}",
+           "detail":"{verification result details}"}
+
+      - action: "Handle post-merge verification failure"
+        condition: "post_merge_verification failed"
+        steps:
+          - action: "Reopen the original issue"
+            command: |
+              gh issue reopen {task.issue_number} --comment "
+              ## Post-Merge Verification Failed
+
+              The merged fix did not resolve the issue.
+
+              ### Evidence
+              {verification_failure_details}
+
+              ### Recurrence Metadata
+              - Attempt: {attempt_number}
+              - Previous PR: #{pr_number}
+              - Failure evidence: {failure_evidence}
+              - Original trigger: {trigger_source}
+
+              Re-entering the workflow for another attempt."
+          - action: "Add label: regression"
+            command: 'gh issue edit {task.issue_number} --add-label "regression"'
+          - action: "Check reopen limit"
+            condition: "attempt_number >= config.reopen_policy.max_reopen_attempts"
+            on_true: "Escalate to user with full recurrence history"
+          - action: "Re-enter workflow at strategic_plan"
+            condition: "attempt_number < config.reopen_policy.max_reopen_attempts"
+            detail: |
+              Re-enter the workflow at strategic_plan phase with:
+                - Original user_request
+                - Previous attempt's strategic plan
+                - Failure evidence from post-merge verification
+                - All accumulated lessons from this issue
+
+    on_error:
+      retry: 2
+      escalate: "Alert user: merge failed"
+
+  # -------------------------------------------------------------------------
+  # PHASE 8: COMPLETION
+  # -------------------------------------------------------------------------
+  - id: completion
+    name: "Completion"
+    description: "All issues done — generate scorecard, consolidate lessons, close parent"
+    executor: openclaw
+
+    preconditions:
+      - "All task issues are closed"
+      - "All post-merge verifications passed (if enabled)"
+
+    steps:
+      - action: "Verify all tasks are complete"
+        check: "Every task.issue_number has state=closed"
+
+      - action: "Consolidate lessons"
+        description: |
+          Review all lessons generated during this workflow run.
+          Merge duplicates, upgrade confidence for patterns seen multiple times,
+          and produce a summary of what the pipeline learned.
+        steps:
+          - "Scan .factory/lessons/ for lessons with source_ref.session_id == current session"
+          - "Merge any lessons with identical patterns (keep the one with higher confidence)"
+          - "Upgrade confidence to 'high' for any lesson with times_seen >= 3"
+          - "Count total lessons_generated for the scorecard"
+        log: |
+          {"action":"lessons_consolidated","phase":"completion","status":"ok",
+           "detail":"Consolidated {total_lessons} lessons from this run, {new_lessons} new"}
+
+      - action: "Generate scorecard"
+        description: |
+          Produce a quantitative scorecard for this workflow run.
+          Save as JSON matching schemas/scorecard.schema.json.
+        steps:
+          - "Collect all metrics from .factory/session.json"
+          - "Compute timing breakdown: planning_ms, implementation_ms, review_ms, merge_ms"
+          - "Compute quality metrics: review_cycles_avg, retries_total, security_findings, scope_violations, scope_churn_ratio"
+          - "Set escaped_defects and post_merge_regressions to 0 (updated retroactively)"
+          - "Count lessons_generated from this run"
+          - action: "Compute composite score using docs/METRICS.md formula"
+            formula: |
+              score = 100
+                - (review_cycles_avg - 1) * 10
+                - retries_total * 5
+                - security_findings.critical * 20
+                - security_findings.important * 5
+                - scope_violations * 15
+                - escaped_defects * 25
+                - post_merge_regressions * 25
+                + lessons_generated * 2
+              score = max(0, min(100, score))
+          - "Build scorecard JSON with all fields from schemas/scorecard.schema.json"
+          - "Save to .factory/scorecards/{session_id}.json"
+        validate:
+          - action: "Schema validation"
+            command: 'validate-json --schema "schemas/scorecard.schema.json" --data ".factory/scorecards/{session_id}.json"'
+            on_failure: "Log warning but do not block completion"
+        log: |
+          {"action":"scorecard_generated","phase":"completion","status":"ok",
+           "detail":"Scorecard saved: score={composite_score}/100, {tasks_completed} tasks completed"}
+
+      - action: "Close parent tracking issue"
+        command: |
+          gh issue close {parent_issue} --comment "
+          ## Feature Complete: {strategic_plan.feature_title}
+
+          All {task_count} tasks completed and merged.
+
+          ### Merged PRs
+          {list of pr_numbers with titles}
+
+          ### Summary
+          {strategic_plan.solution_overview}
+
+          ### Scorecard
+          - Composite score: {composite_score}/100
+          - Review cycles (avg): {review_cycles_avg}
+          - Retries: {retries_total}
+          - Security findings: {security_findings_summary}
+          - Scope violations: {scope_violations}
+          - Lessons generated: {lessons_generated}
+
+          Feature delivered successfully."
+
+      - action: "Generate workflow report"
+        description: "Write a final audit report summarizing the entire workflow run"
+        command: |
+          claude --print --prompt "/plan
+          ## Generate Workflow Completion Report
+
+          Read .factory/workflow.log, .factory/session.json, and
+          .factory/scorecards/{session_id}.json.
+
+          Produce a markdown report at .factory/REPORT.md with:
+
+          ### Execution Summary
+          - Feature title, total duration, total cost
+          - Tasks: completed / failed / blocked
+          - Composite score and rating (per docs/METRICS.md interpretation table)
+          - Total tokens used (planning vs implementation vs review)
+
+          ### Phase Timeline
+          - Each phase with start/end time, duration, status
+          - Token usage per phase
+
+          ### Decisions Audit Trail
+          - Every decision made and why
+          - Every retry and what was different
+          - ADRs generated (if any)
+
+          ### Security Report
+          - All security findings from reviews (by severity)
+          - Preflight findings: secrets detected, scope violations, dependency vulnerabilities
+          - Any security overrides with justification
+
+          ### Quality Metrics
+          - Review cycles per PR
+          - Auto-repairs triggered
+          - Test coverage assessment results
+          - Scope churn ratio
+
+          ### Learning Report
+          - Lessons extracted during this run
+          - Lessons from previous runs that were applied
+          - Recommendations for future runs
+
+          ### Heuristics Packs
+          - Which packs were active
+          - Which pack rules fired and their impact
+
+          ### Post-Merge Verification
+          - Verification results per task
+          - Any reopened issues and recurrence metadata
+
+          ### Recommendations
+          - What could be improved in the next run
+          - Patterns that worked well
+          - Token optimization opportunities
+
+          Output as markdown."
+
+      - action: "Post report summary to parent issue"
+        command: |
+          gh issue comment {parent_issue} --body "$(cat .factory/REPORT.md)"
+
+      - action: "Notify user: feature complete"
+        log: |
+          {"action":"phase_end","phase":"completion","status":"ok",
+           "detail":"Feature complete: {task_count} tasks merged, score={composite_score}/100",
+           "metrics":{
+             "composite_score":"$COMPOSITE_SCORE",
+             "total_duration_ms":"$TOTAL_DURATION",
+             "tasks_completed":"$COMPLETED",
+             "review_cycles_avg":"$REVIEW_CYCLES_AVG",
+             "retries_total":"$RETRIES",
+             "lessons_generated":"$LESSONS_GENERATED",
+             "total_tokens":"$TOTAL_TOKENS",
+             "total_cost_usd":"$TOTAL_COST"
+           }}
+
+    output:
+      summary: "Feature completion summary"
+      merged_prs: "List of all merged PRs"
+      scorecard: ".factory/scorecards/{session_id}.json"
+      report: ".factory/REPORT.md"
+      lessons: "List of lesson IDs generated during this run"

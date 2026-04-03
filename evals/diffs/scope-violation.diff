@@ -1,0 +1,22 @@
+diff --git a/src/auth/login.ts b/src/auth/login.ts
+index 1234567..abcdef0 100644
+--- a/src/auth/login.ts
++++ b/src/auth/login.ts
+@@ -10,6 +10,7 @@ export async function login(email: string, password: string) {
+   const token = generateToken(user.id);
+   return { token };
+ }
++// This file is in scope
+
+diff --git a/src/billing/invoice.ts b/src/billing/invoice.ts
+index 1234567..abcdef0 100644
+--- a/src/billing/invoice.ts
++++ b/src/billing/invoice.ts
+@@ -1,5 +1,8 @@
++// THIS FILE IS OUT OF SCOPE — scope violation!
++// The task only declared src/auth/ as in-scope
+ export function createInvoice(userId: string, amount: number) {
++  console.log('drive-by change in billing code');
+   return {
+     userId,
+     amount,

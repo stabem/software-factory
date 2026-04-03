@@ -1,0 +1,93 @@
+{
+  "schema_version": "1.0",
+  "feature_title": "Add user authentication with JWT tokens",
+  "problem_statement": "The application has no authentication. Any user can access any endpoint without credentials, which is a security risk for production deployment.",
+  "root_cause": "Authentication was deferred during initial prototype phase and never implemented.",
+  "solution_overview": "Implement JWT-based authentication with bcrypt password hashing, middleware-based route protection, and refresh token rotation.",
+  "lessons_consulted": [],
+  "architectural_decisions": [
+    {
+      "title": "JWT over session-based auth",
+      "context": "Need stateless auth for horizontal scaling",
+      "decision": "Use JWT with short-lived access tokens (15min) and longer refresh tokens (7d)",
+      "alternatives_considered": [
+        {
+          "option": "Session-based auth with Redis",
+          "pros": ["Simpler revocation", "No token size in requests"],
+          "cons": ["Requires Redis dependency", "Not stateless"],
+          "rejected_because": "Adds infrastructure dependency and prevents stateless scaling"
+        }
+      ],
+      "rationale": "JWT enables stateless auth which aligns with the planned Kubernetes deployment. Short-lived tokens mitigate the revocation limitation.",
+      "consequences": "Must implement refresh token rotation and maintain a token blacklist for forced logout.",
+      "decision_confidence": "high"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-001",
+      "title": "Implement user model and password hashing",
+      "description": "Create User model with email/password fields, bcrypt hashing on save, and password comparison method.",
+      "change_class": "feature",
+      "priority": "P1",
+      "files_in_scope": ["src/models/user.ts", "src/models/user.test.ts"],
+      "files_out_of_scope": ["src/models/post.ts", "src/routes/"],
+      "dependencies": [],
+      "acceptance_criteria": [
+        "WHEN a user is created with a password THEN the password is stored as bcrypt hash with cost >= 10",
+        "WHEN comparePassword is called with correct password THEN it returns true",
+        "WHEN comparePassword is called with wrong password THEN it returns false"
+      ],
+      "security_risk_level": "high",
+      "security_notes": "Handles credentials — bcrypt with cost 12, constant-time comparison, no plaintext storage",
+      "estimated_complexity": "medium",
+      "wave": 1
+    },
+    {
+      "id": "task-002",
+      "title": "Implement JWT token service",
+      "description": "Create token service for generating and verifying access/refresh JWT tokens with proper claims.",
+      "change_class": "feature",
+      "priority": "P1",
+      "files_in_scope": ["src/services/token.ts", "src/services/token.test.ts"],
+      "files_out_of_scope": ["src/models/", "src/routes/"],
+      "dependencies": [],
+      "acceptance_criteria": [
+        "WHEN generateAccessToken is called THEN it returns a JWT with 15min expiry and user_id claim",
+        "WHEN generateRefreshToken is called THEN it returns a JWT with 7d expiry",
+        "WHEN verifyToken is called with expired token THEN it throws TokenExpiredError"
+      ],
+      "security_risk_level": "high",
+      "security_notes": "Uses RS256 algorithm, keys from environment variables, never hardcoded",
+      "estimated_complexity": "medium",
+      "wave": 1
+    },
+    {
+      "id": "task-003",
+      "title": "Implement auth middleware and login/register routes",
+      "description": "Create auth middleware that validates JWT on protected routes, and login/register endpoints.",
+      "change_class": "feature",
+      "priority": "P1",
+      "files_in_scope": ["src/middleware/auth.ts", "src/routes/auth.ts", "src/middleware/auth.test.ts", "src/routes/auth.test.ts"],
+      "files_out_of_scope": ["src/models/", "src/services/token.ts"],
+      "dependencies": ["task-001", "task-002"],
+      "acceptance_criteria": [
+        "WHEN request has valid JWT in Authorization header THEN middleware passes and sets req.user",
+        "WHEN request has expired JWT THEN middleware returns 401 with safe message",
+        "WHEN POST /auth/register with valid data THEN user is created and tokens returned",
+        "WHEN POST /auth/login with valid credentials THEN tokens returned",
+        "WHEN POST /auth/login with invalid credentials THEN 401 returned with safe message"
+      ],
+      "security_risk_level": "high",
+      "security_notes": "Rate limit login to 5 req/min/IP, no user enumeration in error messages",
+      "estimated_complexity": "large",
+      "wave": 2
+    }
+  ],
+  "validation_commands": {
+    "build": "npm run build",
+    "test": "npm test",
+    "lint": "npm run lint"
+  },
+  "rollback": "git revert HEAD~3 (one commit per task)"
+}

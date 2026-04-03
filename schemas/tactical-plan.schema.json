@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Tactical Plan",
+  "description": "Output schema for Phase 4 — Tactical Planning. Detailed implementation plan per issue.",
+  "type": "object",
+  "required": ["schema_version", "issue_number", "task_id", "implementation_steps", "test_strategy", "security_checks", "context_files_for_implementer", "handoff"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "issue_number": { "type": "integer" },
+    "task_id": { "type": "string", "pattern": "^task-[0-9]{3}$" },
+    "lessons_consulted": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["lesson_id", "preventive_control"],
+        "properties": {
+          "lesson_id": { "type": "string" },
+          "pattern": { "type": "string" },
+          "preventive_control": { "type": "string", "description": "What was added to this plan because of this lesson" }
+        }
+      }
+    },
+    "implementation_steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["order", "file", "action", "description"],
+        "properties": {
+          "order": { "type": "integer", "minimum": 1 },
+          "file": { "type": "string" },
+          "action": { "enum": ["create", "modify", "delete"] },
+          "description": { "type": "string" },
+          "functions_affected": { "type": "array", "items": { "type": "string" } },
+          "lines_estimated": { "type": "integer" }
+        }
+      }
+    },
+    "new_files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "purpose"],
+        "properties": {
+          "path": { "type": "string" },
+          "purpose": { "type": "string" },
+          "skeleton": { "type": "string" }
+        }
+      }
+    },
+    "test_strategy": {
+      "type": "object",
+      "required": ["unit_tests"],
+      "properties": {
+        "unit_tests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["file", "tests"],
+            "properties": {
+              "file": { "type": "string" },
+              "tests": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "integration_tests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["file", "tests"],
+            "properties": {
+              "file": { "type": "string" },
+              "tests": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "edge_cases": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "security_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["check", "how"],
+        "properties": {
+          "check": { "type": "string" },
+          "how": { "type": "string" }
+        }
+      }
+    },
+    "context_files_for_implementer": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "reason"],
+        "properties": {
+          "file": { "type": "string" },
+          "reason": { "type": "string" },
+          "priority": { "type": "integer" }
+        }
+      }
+    },
+    "handoff": {
+      "type": "object",
+      "required": ["in_scope_files", "out_of_scope_files", "validation_commands", "rollback"],
+      "properties": {
+        "in_scope_files": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "out_of_scope_files": { "type": "array", "items": { "type": "string" } },
+        "validation_commands": {
+          "type": "object",
+          "required": ["build", "test"],
+          "properties": {
+            "build": { "type": "string" },
+            "test": { "type": "string" },
+            "smoke": { "type": "string" }
+          }
+        },
+        "rollback": { "type": "string" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

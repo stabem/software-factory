@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "feature_title": "Plan with overlapping file scope in same wave",
+  "problem_statement": "This plan should be rejected by the orchestrator because two tasks in wave 1 share files_in_scope.",
+  "solution_overview": "Both tasks modify src/routes/api.ts in wave 1, violating disjoint ownership.",
+  "tasks": [
+    {
+      "id": "task-001",
+      "title": "Add GET endpoint",
+      "description": "Add GET /api/items endpoint",
+      "change_class": "feature",
+      "files_in_scope": ["src/routes/api.ts"],
+      "files_out_of_scope": [],
+      "dependencies": [],
+      "acceptance_criteria": ["GET /api/items returns 200"],
+      "security_risk_level": "low",
+      "wave": 1
+    },
+    {
+      "id": "task-002",
+      "title": "Add POST endpoint",
+      "description": "Add POST /api/items endpoint — CONFLICT: same file as task-001 in same wave",
+      "change_class": "feature",
+      "files_in_scope": ["src/routes/api.ts"],
+      "files_out_of_scope": [],
+      "dependencies": [],
+      "acceptance_criteria": ["POST /api/items creates item"],
+      "security_risk_level": "low",
+      "wave": 1
+    }
+  ],
+  "validation_commands": { "build": "npm run build", "test": "npm test" },
+  "rollback": "git revert HEAD~2"
+}

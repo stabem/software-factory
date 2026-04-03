@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lesson",
+  "description": "Structured lesson extracted from review findings, retries, and failures. Feeds the learning loop.",
+  "type": "object",
+  "required": ["id", "ts", "source_phase", "pattern", "root_cause", "preventive_rule", "scope", "confidence"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^lesson-[0-9]{4}$" },
+    "ts": { "type": "string", "format": "date-time" },
+    "source_phase": { "enum": ["strategic_plan", "tactical_plan", "implementation", "code_review", "merge", "post_merge", "incident"] },
+    "source_ref": {
+      "type": "object",
+      "description": "Where this lesson came from",
+      "properties": {
+        "issue": { "type": "integer" },
+        "pr": { "type": "integer" },
+        "finding_index": { "type": "integer" },
+        "session_id": { "type": "string" }
+      }
+    },
+    "pattern": { "type": "string", "description": "The recurring pattern observed (e.g., 'missing rate limiting on public endpoints')" },
+    "root_cause": { "type": "string", "description": "Why this keeps happening" },
+    "preventive_rule": { "type": "string", "description": "Concrete rule to prevent recurrence (e.g., 'every new public endpoint must include rate limit in acceptance criteria')" },
+    "scope": { "enum": ["this-project", "same-stack", "universal"], "description": "Applicability scope" },
+    "confidence": { "enum": ["high", "medium", "low"], "description": "How confident are we this rule is correct" },
+    "times_seen": { "type": "integer", "minimum": 1, "default": 1, "description": "How many times this pattern was observed" },
+    "last_seen": { "type": "string", "format": "date-time" },
+    "superseded_by": { "type": "string", "description": "If this lesson was replaced by a better one, reference its id" }
+  },
+  "additionalProperties": false
+}

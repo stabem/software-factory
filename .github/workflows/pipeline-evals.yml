@@ -1,0 +1,69 @@
+name: Pipeline Self-Evals
+
+on:
+  push:
+    paths:
+      - 'schemas/**'
+      - 'templates/**'
+      - 'workflow.yaml'
+      - 'evals/**'
+  pull_request:
+    paths:
+      - 'schemas/**'
+      - 'templates/**'
+      - 'workflow.yaml'
+      - 'evals/**'
+
+jobs:
+  schema-validation:
+    name: Validate Schemas & Fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install jsonschema pyyaml
+
+      - name: Validate workflow.yaml syntax
+        run: python3 -c "import yaml; yaml.safe_load(open('workflow.yaml')); print('workflow.yaml: valid')"
+
+      - name: Validate all JSON schemas are valid JSON Schema
+        run: |
+          python3 -c "
+          import json, os
+          for f in sorted(os.listdir('schemas')):
+            if f.endswith('.json'):
+              schema = json.load(open(f'schemas/{f}'))
+              assert '\$schema' in schema or 'type' in schema, f'{f} is not a valid schema'
+              print(f'  OK  schemas/{f}')
+          print('All schemas are valid.')
+          "
+
+      - name: Run pipeline self-evals
+        run: python3 evals/run_evals.py
+
+      - name: Verify internal references
+        run: |
+          echo "Checking that all referenced files exist..."
+          MISSING=0
+          for ref in AGENTS.md workflow.yaml templates/CLAUDE_PLAN.md templates/CLAUDE_REVIEW.md templates/ISSUE_BODY.md; do
+            if [ ! -f "$ref" ]; then
+              echo "  MISSING: $ref"
+              MISSING=1
+            fi
+          done
+          for schema in schemas/*.schema.json; do
+            if [ ! -f "$schema" ]; then
+              echo "  MISSING: $schema"
+              MISSING=1
+            fi
+          done
+          if [ "$MISSING" -eq 1 ]; then
+            echo "Some referenced files are missing!"
+            exit 1
+          fi
+          echo "All references valid."

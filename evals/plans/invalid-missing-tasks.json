@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "feature_title": "A plan with no tasks",
+  "problem_statement": "This plan is intentionally invalid — it has no tasks array.",
+  "solution_overview": "This should fail schema validation because tasks is required.",
+  "validation_commands": { "build": "npm run build", "test": "npm test" },
+  "rollback": "git revert HEAD"
+}

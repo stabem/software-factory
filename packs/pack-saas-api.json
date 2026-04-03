@@ -1,0 +1,73 @@
+{
+  "name": "pack-saas-api",
+  "version": "v1.0",
+  "domain": "saas-api",
+  "description": "Heuristics pack for SaaS backend APIs. Covers auth, rate limiting, multi-tenancy, billing safety, and API design.",
+  "lessons": [
+    {
+      "pattern": "Public endpoint deployed without rate limiting",
+      "preventive_rule": "Every new public endpoint must have rate limiting in acceptance criteria (auth: 5-10 req/min/IP, read: 100 req/min/user, write: 20 req/min/user)",
+      "confidence": "high"
+    },
+    {
+      "pattern": "User data leak through error messages",
+      "preventive_rule": "Error responses must never include: user emails, internal IDs, stack traces, SQL errors, or server paths",
+      "confidence": "high"
+    },
+    {
+      "pattern": "N+1 query on list endpoints causing latency spikes",
+      "preventive_rule": "Every list endpoint must use eager loading or batch queries. Test with 100+ records.",
+      "confidence": "high"
+    },
+    {
+      "pattern": "Missing tenant isolation in multi-tenant queries",
+      "preventive_rule": "Every database query must include tenant_id filter. No cross-tenant data access.",
+      "confidence": "high"
+    }
+  ],
+  "planning_rules": [
+    {
+      "trigger": "new public endpoint",
+      "rule": "Acceptance criteria must include: rate limit specification, input validation, auth requirement, response pagination (if list)"
+    },
+    {
+      "trigger": "payment or billing flow",
+      "rule": "Require idempotency key, reconciliation log, and test for double-charge prevention"
+    },
+    {
+      "trigger": "user data endpoint",
+      "rule": "Plan must address: tenant isolation, PII filtering in logs, GDPR data access/deletion"
+    },
+    {
+      "trigger": "webhook endpoint",
+      "rule": "Plan must include: signature verification, replay protection, idempotent processing"
+    }
+  ],
+  "review_checks": [
+    {
+      "category": "multi-tenancy",
+      "check": "All database queries include tenant_id filter — no cross-tenant data leaks",
+      "severity_if_failed": "critical"
+    },
+    {
+      "category": "billing-safety",
+      "check": "Payment operations use idempotency keys and log reconciliation events",
+      "severity_if_failed": "critical"
+    },
+    {
+      "category": "api-design",
+      "check": "List endpoints return paginated results with default and max page size",
+      "severity_if_failed": "important"
+    },
+    {
+      "category": "api-design",
+      "check": "Error responses use consistent format: {error: {code, message, details}}",
+      "severity_if_failed": "advisory"
+    }
+  ],
+  "metric_overrides": [
+    { "metric": "api_p99_latency", "target": "< 500ms" },
+    { "metric": "auth_endpoint_rate_limit", "target": "5-10 req/min/IP" },
+    { "metric": "db_query_p95", "target": "< 50ms" }
+  ]
+}

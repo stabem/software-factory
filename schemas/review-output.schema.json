@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Review Output",
+  "description": "Output schema for Phase 6 — Code Review. Claude Code /review must produce JSON matching this schema.",
+  "type": "object",
+  "required": ["schema_version", "pr_number", "verdict", "findings", "scope_compliance", "security_assessment", "test_coverage", "summary"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "pr_number": { "type": "integer" },
+    "verdict": { "enum": ["APPROVE", "REQUEST_CHANGES"] },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "category", "file", "description", "recommendation"],
+        "properties": {
+          "severity": { "enum": ["critical", "important", "advisory"] },
+          "category": { "enum": ["injection", "auth", "crypto", "error-handling", "session", "api-security", "dependency", "secrets", "database", "quality", "scope", "testing", "performance"] },
+          "file": { "type": "string" },
+          "line": { "type": "integer" },
+          "description": { "type": "string" },
+          "evidence": { "type": "string" },
+          "recommendation": { "type": "string" },
+          "root_cause": { "type": "string", "description": "Why this issue exists — feeds learning loop" },
+          "preventive_rule": { "type": "string", "description": "Rule that would have prevented this — feeds future planning" },
+          "reusability_scope": { "enum": ["this-project", "same-stack", "universal"], "description": "Can this lesson apply beyond this project?" }
+        }
+      }
+    },
+    "scope_compliance": {
+      "type": "object",
+      "required": ["in_scope_match", "out_of_scope_violation"],
+      "properties": {
+        "in_scope_match": { "type": "boolean" },
+        "out_of_scope_violation": { "type": "boolean" },
+        "scope_expansion_detected": { "type": "boolean" },
+        "notes": { "type": "string" }
+      }
+    },
+    "security_assessment": {
+      "type": "object",
+      "required": ["passed"],
+      "properties": {
+        "passed": { "type": "boolean" },
+        "findings_count": {
+          "type": "object",
+          "properties": {
+            "critical": { "type": "integer" },
+            "important": { "type": "integer" },
+            "advisory": { "type": "integer" }
+          }
+        }
+      }
+    },
+    "test_coverage": {
+      "type": "object",
+      "properties": {
+        "happy_path": { "enum": ["covered", "missing"] },
+        "error_path": { "enum": ["covered", "missing"] },
+        "edge_cases": { "enum": ["covered", "missing"] },
+        "regression": { "enum": ["covered", "missing"] },
+        "security_path": { "enum": ["covered", "missing", "n/a"] }
+      }
+    },
+    "summary": { "type": "string" },
+    "machine_findings_acknowledged": {
+      "type": "array",
+      "description": "Deterministic findings from preflight checks that the reviewer incorporated",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}
