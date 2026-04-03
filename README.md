@@ -13,7 +13,7 @@ A drop-in methodology that turns natural language feature requests — or produc
 | Tool | Role | Invocation |
 |------|------|------------|
 | **OpenClaw** | Orchestrator — drives the workflow, manages issues/PRs, coordinates tools | Reads this README + `workflow.yaml` |
-| **Claude Code** | Planner + Reviewer — analyzes codebase, produces plans, reviews PRs | `claude --print --prompt "/plan ..."` or `"/review ..."` |
+| **Claude Code** | Planner + Reviewer — analyzes codebase, produces plans, reviews PRs | `claude -p --permission-mode bypassPermissions "/plan ..."` or `"/review ..."` |
 | **Codex** | Implementer — writes code, runs tests, creates PRs | `codex --prompt "..." --full-auto` |
 
 **What makes this different from other AI dev frameworks:**
@@ -39,14 +39,14 @@ You are the orchestrator for LLM-Guided Software Architecture. You drive the wor
 
 **Claude Code — Planning:**
 ```bash
-claude --print --prompt "/plan
+claude -p --permission-mode bypassPermissions "/plan
 [paste context: user request, codebase info, constraints, active lessons]
 [ask for structured JSON output matching schemas/strategic-plan.schema.json]"
 ```
 
 **Claude Code — Review:**
 ```bash
-claude --print --prompt "/review
+claude -p --permission-mode bypassPermissions "/review
 [paste context: PR number, issue requirements, scope, machine_findings from preflight]
 [ask for structured findings matching schemas/review-output.schema.json]"
 ```

@@ -25,7 +25,7 @@ version: "4.0"
 tools:
   claude_code:
     description: "Planning and code review via Claude Code CLI"
-    invoke_pattern: 'claude --print --prompt "{prompt}"'
+    invoke_pattern: 'claude -p --permission-mode bypassPermissions "{prompt}"'
     modes:
       plan: "Prefix prompt with /plan"
       review: "Prefix prompt with /review"
@@ -507,7 +507,7 @@ phases:
           - "Format as additional constraints for the planner"
 
     command: |
-      claude --print --prompt "/plan
+      claude -p --permission-mode bypassPermissions "/plan
       ## User Request
       {user_request}
 
@@ -693,7 +693,7 @@ phases:
           - "Filter to rules whose trigger matches the current task context"
 
     command: |
-      claude --print --prompt "/plan
+      claude -p --permission-mode bypassPermissions "/plan
       ## Issue #{task.issue_number}: {task.title}
 
       ## Description
@@ -947,7 +947,7 @@ phases:
           - "Format as additional checklist items for the reviewer"
 
     command: |
-      claude --print --prompt "/review
+      claude -p --permission-mode bypassPermissions "/review
       ## PR #{pr_number}
 
       Review this PR against issue #{task.issue_number}.
@@ -1213,7 +1213,7 @@ phases:
       - action: "Generate workflow report"
         description: "Write a final audit report summarizing the entire workflow run"
         command: |
-          claude --print --prompt "/plan
+          claude -p --permission-mode bypassPermissions "/plan
           ## Generate Workflow Completion Report
 
           Read .factory/workflow.log, .factory/session.json, and
