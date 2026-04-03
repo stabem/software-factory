@@ -211,6 +211,7 @@ software-factory/
 │   ├── public/                           # Vanilla HTML/CSS/JS frontend (7 views)
 │   └── package.json                      # npx software-factory to run
 ├── docs/
+│   ├── LOGGING.md                        # Enterprise logging standard (pipeline + application)
 │   └── METRICS.md                        # Scorecard formula and interpretation
 ├── .github/
 │   ├── ISSUE_TEMPLATE/

@@ -160,6 +160,7 @@ Key fields:
 - Wave ordering respects dependencies — wave N+1 only depends on wave N or earlier
 - `lessons_consulted` is populated when `.factory/lessons/` contains relevant entries
 - `preventive_controls` from lessons appear in acceptance criteria
+- Acceptance criteria include logging requirements per `docs/LOGGING.md` (structured logs, security events, no PII in logs)
 
 ## Context Loading Rules
 

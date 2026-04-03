@@ -93,10 +93,15 @@ These results are passed into the review prompt as `machine_findings`. As review
 
 ## 4. Error Handling & Logging
 
+> Full specification: `docs/LOGGING.md`
+
 - [ ] Error responses to clients exclude: stack traces, internal paths, DB errors, server versions
-- [ ] Logs exclude: passwords, tokens, API keys, session IDs, PII, credit card numbers
+- [ ] Logs exclude: passwords, tokens, API keys, session IDs, PII, credit card numbers (see LOGGING.md section 2.5)
 - [ ] No empty catch blocks — errors are handled, logged, or explicitly justified
-- [ ] Security events ARE logged: auth failures, permission denials, rate limit triggers, input validation failures
+- [ ] Security events ARE logged: auth failures, permission denials, rate limit triggers, input validation failures (see LOGGING.md section 2.4)
+- [ ] Log entries are structured (JSON) with at minimum: `ts`, `level`, `msg`, `component`
+- [ ] Log levels are appropriate: `error` for failures, `warn` for handled anomalies, `info` for business events
+- [ ] New endpoints log request completion at `info` with `request_id` and `duration_ms`
 
 ---
 

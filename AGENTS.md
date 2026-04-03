@@ -147,66 +147,32 @@ Files that must NEVER be committed:
    - Logs: detailed with context (`validation failed: email='<>' request_id=abc123`)
 4. **Retry with backoff** — exponential backoff + jitter for external calls, max 3 retries
 
-### Structured Logging (Application Code)
+### Logging & Observability
 
-Adapt to the project's stack. These are principles, not a rigid schema — apply what makes sense for the type of software being built (web API, CLI tool, library, mobile app, embedded system, etc.).
+See **`docs/LOGGING.md`** for the complete enterprise logging specification.
 
-**Minimum fields per log entry:**
-- `timestamp` (ISO 8601 UTC)
-- `level` (debug, info, warn, error)
-- `message` (human-readable, one sentence)
+**Quick reference — Application logs (built software):**
 
-**Additional fields when applicable:**
-- `request_id` or `correlation_id` (for services handling requests)
-- `component` (for multi-module systems)
-- `user_id` (for multi-user systems — use opaque ID, never PII)
-- `duration_ms` (for operations where performance matters)
+| Field | Required | Description |
+|-------|----------|-------------|
+| `ts` | yes | ISO 8601 UTC |
+| `level` | yes | debug, info, warn, error |
+| `msg` | yes | Human-readable, one sentence |
+| `component` | yes | Module or service name |
+| `request_id` | when applicable | Correlation ID for tracing |
 
-**Log levels:**
-- `error`: something failed that needs attention
-- `warn`: unexpected but handled gracefully
-- `info`: significant events worth tracking
-- `debug`: diagnostic detail (disabled in production)
+**Never log:** passwords, tokens, API keys, session IDs, PII, credit cards, full request bodies.
 
-**Never log:** passwords, tokens, API keys, session IDs, PII, credit cards, full request bodies with sensitive fields
+**Always log (security events):** auth failures, auth denials, input validation failures, rate limit triggers, config changes, sensitive data access.
 
-**Log security events when the application handles auth/data:**
-- Authentication failures
-- Authorization denials
-- Input validation failures (field name, not the value if sensitive)
-- Rate limit triggers
-- Configuration changes
-- Access to sensitive resources
+**Quick reference — Pipeline logs (AI workflow):**
 
-### Workflow Observability (AI Pipeline)
+| File | Content |
+|------|---------|
+| `.factory/workflow.log` | JSONL audit trail — every action, decision, error, retry |
+| `.factory/session.json` | Current run state — phase, tasks, metrics, decisions |
 
-The AI development pipeline itself must have full observability. This is what makes it auditable and improvable over time.
-
-**Log file:** `.factory/workflow.log` (JSONL — one JSON per line)
-**Session state:** `.factory/session.json` (metrics for current run)
-
-Every tool invocation by the orchestrator logs:
-```json
-{"ts":"ISO8601","phase":"plan|implement|review","tool":"claude_code|codex|gh",
- "status":"ok|error|retry","duration_ms":N,
- "decision":"why this action was taken","detail":"what happened"}
-```
-
-Token and cost fields are optional — include them when the provider exposes that data.
-
-**Always tracked (required):**
-- Duration per phase (where is the bottleneck?)
-- Retry count and reasons (what keeps failing?)
-- Review cycles per PR (are plans getting better over time?)
-- Security findings by severity (is the implementer learning?)
-- Scope violations (are file boundaries being respected?)
-- Every decision and its rationale (why was this approach chosen?)
-
-**Tracked when available (optional):**
-- Token usage by phase (planning vs implementation vs review)
-- Estimated cost per run
-
-**Why:** Without observability, you cannot identify bottleneck phases, detect patterns in review findings, optimize the pipeline, or audit decisions. The development process must be as observable as the software it produces.
+Every pipeline action logs: `ts`, `sid`, `level`, `phase`, `action`, `status`, `detail`. Duration, tokens, cost, decision rationale, and refs (issue/PR/branch) when applicable.
 
 ### Performance Standards
 
