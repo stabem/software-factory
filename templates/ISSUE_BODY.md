@@ -98,10 +98,13 @@ No architectural decisions required for this task.
 ## 9. Incident Context
 
 {if trigger_source == "incident"}
-- **Error Fingerprint:** {incident_context.fingerprint}
-- **Affected Service:** {incident_context.service}
-- **Error Sample:** {incident_context.error_sample}
-- **Recurrence Count:** {incident_context.recurrence_count}
+- **Error Fingerprint:** {incident_context.error_fingerprint}
+- **Stack Trace:** {incident_context.stack_trace}
+- **Affected Service:** {incident_context.affected_service}
+- **Environment:** {incident_context.environment}
+- **First Seen:** {incident_context.first_seen}
+- **Last Seen:** {incident_context.last_seen}
+- **Incident URL:** {incident_context.incident_url}
 {else}
 N/A — not triggered by incident.
 {endif}

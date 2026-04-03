@@ -7,7 +7,7 @@
   "properties": {
     "id": { "type": "string", "pattern": "^lesson-[0-9]{4}$" },
     "ts": { "type": "string", "format": "date-time" },
-    "source_phase": { "enum": ["strategic_plan", "tactical_plan", "implementation", "code_review", "merge", "post_merge", "incident"] },
+    "source_phase": { "enum": ["intake", "strategic_plan", "issue_creation", "tactical_plan", "implementation", "code_review", "merge", "completion", "post_merge", "incident"] },
     "source_ref": {
       "type": "object",
       "description": "Where this lesson came from",

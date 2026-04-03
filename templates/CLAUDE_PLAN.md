@@ -11,8 +11,10 @@ You are the **Planner**. Analyze the codebase, understand the request, produce a
 
 ## Learning Loop Integration
 
-Before planning, load lessons from `.factory/lessons/`. For each relevant lesson, add its `preventive_rule` to your acceptance criteria or security checks. Include `lessons_consulted[]` in output:
-`{ "lesson_id": "L-042", "pattern": "missing-index-on-lookup", "how_applied": "Added index migration as task-003" }`
+Before planning, load lessons from `.factory/lessons/`. For each relevant lesson, add its `preventive_rule` to your acceptance criteria or security checks. Include `lessons_consulted[]` in output.
+
+- **Strategic Plan (Phase 2)**: use `how_applied` — e.g. `{ "lesson_id": "L-042", "pattern": "...", "how_applied": "Added index migration as task-003" }`
+- **Tactical Plan (Phase 4)**: use `preventive_control` — e.g. `{ "lesson_id": "L-042", "pattern": "...", "preventive_control": "Added index check in step 1" }`
 
 ## Heuristics Packs
 

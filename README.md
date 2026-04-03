@@ -78,6 +78,7 @@ When the user says "follow the framework" or starts a new project:
 5. **For CI setup**: Copy `.github/workflows/code-review.yml` and `.github/workflows/pipeline-evals.yml` to `{project}/.github/workflows/`
 6. **If heuristics packs apply**: Copy relevant pack from `packs/` to `{project}/packs/`
 7. **Read `workflow.yaml`** and follow each phase in sequence
+8. **For local monitoring**: Run `npx software-factory` in the project directory to open the dashboard UI
 
 ### The Workflow
 
@@ -205,6 +206,10 @@ software-factory/
 │   └── diffs/                            # Adversarial PR diff fixtures
 ├── packs/
 │   └── pack-saas-api.json                # Example heuristics pack for SaaS APIs
+├── dashboard/
+│   ├── server.js                         # Express server + API + SSE
+│   ├── public/                           # Vanilla HTML/CSS/JS frontend (7 views)
+│   └── package.json                      # npx software-factory to run
 ├── docs/
 │   └── METRICS.md                        # Scorecard formula and interpretation
 ├── .github/

@@ -7,13 +7,13 @@ Local web interface for monitoring LLM-Guided Software Architecture workflow run
 From any project that uses the Software Factory framework:
 
 ```bash
-npx software-factory-dashboard
+npx software-factory
 ```
 
 Or with options:
 
 ```bash
-npx software-factory-dashboard --port 8080 --dir /path/to/project --no-open
+npx software-factory --port 8080 --dir /path/to/project --no-open
 ```
 
 This opens a browser at `http://localhost:3141` with a real-time dashboard showing:
