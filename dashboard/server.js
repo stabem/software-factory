@@ -42,10 +42,12 @@ function readJsonl(filePath) {
 
 function readDir(dirPath, ext = '.json') {
   try {
-    return fs.readdirSync(dirPath)
-      .filter(f => f.endsWith(ext))
-      .map(f => ({ id: f.replace(ext, ''), ...readJson(path.join(dirPath, f)) }))
-      .filter(item => item !== null);
+    const results = [];
+    for (const f of fs.readdirSync(dirPath).filter(f => f.endsWith(ext))) {
+      const data = readJson(path.join(dirPath, f));
+      if (data) results.push({ id: f.replace(ext, ''), ...data });
+    }
+    return results;
   } catch { return []; }
 }
 
@@ -80,9 +82,9 @@ app.get('/api/tasks', (req, res) => {
     if (!taskStates[issue]) taskStates[issue] = { issue, status: 'pending', events: [] };
     taskStates[issue].events.push({ action: entry.action, phase: entry.phase, ts: entry.ts, detail: entry.detail });
 
-    if (entry.phase === 'implementation' && entry.action === 'phase_start') taskStates[issue].status = 'implementing';
-    if (entry.phase === 'code_review' && entry.action === 'phase_start') taskStates[issue].status = 'reviewing';
-    if (entry.phase === 'merge' && entry.action === 'phase_end' && entry.status === 'ok') taskStates[issue].status = 'merged';
+    if (entry.phase === 'implementation' && (entry.action === 'phase_start' || entry.action === 'invoke_codex')) taskStates[issue].status = 'implementing';
+    if (entry.phase === 'code_review') taskStates[issue].status = 'reviewing';
+    if (entry.phase === 'merge' && entry.status === 'ok') taskStates[issue].status = 'merged';
     if (entry.refs?.pr) taskStates[issue].pr = entry.refs.pr;
     if (entry.refs?.branch) taskStates[issue].branch = entry.refs.branch;
   }

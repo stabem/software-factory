@@ -58,15 +58,21 @@ async function updateStatus() {
 }
 
 // ── SSE ──
+let eventSource = null;
 function connectSSE() {
-  const es = new EventSource('/events');
-  es.onmessage = (e) => {
+  if (eventSource) eventSource.close();
+  eventSource = new EventSource('/events');
+  eventSource.onmessage = (e) => {
     const data = JSON.parse(e.data);
     if (data.event === 'connected') return;
     updateStatus();
-    navigate(); // re-render current view
+    navigate();
   };
-  es.onerror = () => setTimeout(connectSSE, 5000);
+  eventSource.onerror = () => {
+    eventSource.close();
+    eventSource = null;
+    setTimeout(connectSSE, 5000);
+  };
 }
 
 // ── Init ──

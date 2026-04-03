@@ -45,9 +45,12 @@ function renderCard(task, repoUrl) {
   const issueLink = repoUrl && task.issue ? `<a href="${repoUrl}/issues/${task.issue}" target="_blank">#${task.issue}</a>` : `#${task.issue || '?'}`;
   const prLink = repoUrl && task.pr ? `<a href="${repoUrl}/pull/${task.pr}" target="_blank">PR #${task.pr}</a>` : task.pr ? `PR #${task.pr}` : '';
 
+  const lastDetail = task.events?.slice().reverse().find(e => e.detail)?.detail || '';
+
   return `
     <div class="kanban-card">
-      <div class="kanban-card-title">${issueLink} ${task.events?.[0]?.detail || ''}</div>
+      <div class="kanban-card-title">${issueLink}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${lastDetail}</div>
       <div class="kanban-card-meta">
         ${task.branch ? `<span class="mono">${task.branch}</span>` : ''}
         ${prLink}
