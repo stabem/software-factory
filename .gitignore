@@ -4,6 +4,12 @@ worktrees/
 # Claude Code local state
 .claude/
 
+# Factory runtime data (generated during workflow execution)
+.factory/
+
+# Dashboard dependencies
+dashboard/node_modules/
+
 # OS
 .DS_Store
 Thumbs.db

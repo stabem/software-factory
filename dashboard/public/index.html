@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Software Factory</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="logo">SF</span>
+      <h1>Software Factory</h1>
+    </div>
+    <div id="status-pill" class="pill pill-grey">No session</div>
+  </header>
+  <div class="layout">
+    <nav class="sidebar">
+      <a href="#/session" class="nav-item active" data-view="session">
+        <span class="nav-icon">&#9673;</span> Session
+      </a>
+      <a href="#/board" class="nav-item" data-view="board">
+        <span class="nav-icon">&#9638;</span> Board
+      </a>
+      <a href="#/timeline" class="nav-item" data-view="timeline">
+        <span class="nav-icon">&#9656;</span> Timeline
+      </a>
+      <a href="#/reviews" class="nav-item" data-view="reviews">
+        <span class="nav-icon">&#9888;</span> Reviews
+      </a>
+      <a href="#/decisions" class="nav-item" data-view="decisions">
+        <span class="nav-icon">&#9733;</span> Decisions
+      </a>
+      <a href="#/scorecards" class="nav-item" data-view="scorecards">
+        <span class="nav-icon">&#9830;</span> Scorecards
+      </a>
+      <a href="#/lessons" class="nav-item" data-view="lessons">
+        <span class="nav-icon">&#9752;</span> Lessons
+      </a>
+    </nav>
+    <main id="main" class="main"></main>
+  </div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "software-factory-dashboard",
+  "version": "0.1.0",
+  "description": "Local web dashboard for LLM-Guided Software Architecture",
+  "bin": {
+    "software-factory": "./server.js"
+  },
+  "files": ["server.js", "public/"],
+  "dependencies": {
+    "express": "^4.21.0",
+    "chokidar": "^3.6.0",
+    "open": "^10.0.0"
+  },
+  "license": "MIT"
+}
